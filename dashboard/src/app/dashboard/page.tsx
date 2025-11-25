@@ -7,7 +7,7 @@ import AirQualityCard from '@/components/AirQualityCard'
 import DeviceStatusCard from '@/components/DeviceStatusCard'
 import ControlPanel from '@/components/ControlPanel'
 import ChartContainer from '@/components/ChartContainer'
-import { db, rtdb } from '@/lib/firebase'
+import { db, rtdb, auth } from '@/lib/firebase'
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore'
 import { ref, onValue } from 'firebase/database'
 
@@ -27,7 +27,7 @@ interface DeviceCommand {
 }
 
 export default function DashboardPage() {
-  const { user, loading, logout } = useAuth()
+  const { user, logout } = useAuth()
   const router = useRouter()
   const [currentReading, setCurrentReading] = useState<SensorReading | null>(null)
   const [historicalData, setHistoricalData] = useState<SensorReading[]>([])
@@ -35,10 +35,25 @@ export default function DashboardPage() {
   const [deviceOnline, setDeviceOnline] = useState(false)
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!user) {
       router.push('/login')
     }
-  }, [user, loading, router])
+  }, [user, router])
+
+  useEffect(() => {
+    if (!user) return
+
+    // Check if user session is still valid
+    const checkAuthStatus = () => {
+      if (auth.currentUser && !auth.currentUser.emailVerified) {
+        console.log('Email not verified - showing reminder')
+      }
+    }
+    
+    checkAuthStatus()
+  }, [user])
+
+  
 
   useEffect(() => {
     if (!user) return
@@ -93,16 +108,25 @@ export default function DashboardPage() {
     }
   }, [user])
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="loading-spinner"></div>
-      </div>
-    )
-  }
+  
 
   if (!user) {
-    return null
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="bg-blue-50 border border-blue-200 text-blue-800 px-6 py-4 rounded-lg mb-6">
+            <h3 className="text-lg font-medium mb-2">Sign in to continue</h3>
+            <p className="text-sm">Please sign in to access your air quality dashboard</p>
+          </div>
+          <button
+            onClick={() => router.push('/login')}
+            className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors"
+          >
+            Sign In
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -117,7 +141,10 @@ export default function DashboardPage() {
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-500">Welcome, {user.email}</span>
               <button
-                onClick={logout}
+                onClick={async () => {
+                  await logout()
+                  router.push('/')
+                }}
                 className="text-sm text-gray-500 hover:text-gray-700"
               >
                 Logout

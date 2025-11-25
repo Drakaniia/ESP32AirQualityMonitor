@@ -5,22 +5,14 @@ import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 
 export default function HomePage() {
-  const { user, loading } = useAuth()
+  const { user } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (!loading && user) {
+    if (user) {
       router.push('/dashboard')
     }
-  }, [user, loading, router])
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="loading-spinner"></div>
-      </div>
-    )
-  }
+  }, [user, router])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -99,13 +91,10 @@ export default function HomePage() {
                 href="/login"
                 className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
               >
-                Sign In to Dashboard
+                Get Started
               </a>
               <p className="mt-4 text-center text-sm text-gray-600">
-                Don't have an account?{' '}
-                <a href="/login" className="font-medium text-blue-600 hover:text-blue-500">
-                  Sign up for free
-                </a>
+                Access your dashboard to monitor air quality in real-time
               </p>
             </div>
           </div>
