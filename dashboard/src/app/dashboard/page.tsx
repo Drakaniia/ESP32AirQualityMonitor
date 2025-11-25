@@ -41,7 +41,7 @@ export default function DashboardPage() {
   }, [user, router])
 
   useEffect(() => {
-    if (!user) return
+    if (!user || !auth || !db || !rtdb) return
 
     // Check if user session is still valid
     const checkAuthStatus = () => {
@@ -51,12 +51,12 @@ export default function DashboardPage() {
     }
     
     checkAuthStatus()
-  }, [user])
+  }, [user, auth, db, rtdb])
 
   
 
   useEffect(() => {
-    if (!user) return
+    if (!user || !db || !rtdb) return
 
     // Listen for latest sensor readings
     const readingsQuery = query(
@@ -106,7 +106,7 @@ export default function DashboardPage() {
       unsubscribeCommands()
       unsubscribeStatus()
     }
-  }, [user])
+  }, [user, db, rtdb])
 
   
 

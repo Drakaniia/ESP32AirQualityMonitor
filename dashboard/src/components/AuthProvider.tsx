@@ -10,6 +10,15 @@ import {
   User
 } from 'firebase/auth'
 
+// Mock auth for static generation
+const mockAuth = {
+  currentUser: null,
+  signInWithEmailAndPassword: async () => { throw new Error('Firebase not initialized') },
+  createUserWithEmailAndPassword: async () => { throw new Error('Firebase not initialized') },
+  signOut: async () => { throw new Error('Firebase not initialized') },
+  onAuthStateChanged: () => () => {}
+}
+
 interface AuthContextType {
   user: User | null
   loading: boolean
@@ -25,6 +34,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
+    if (!auth) {
+      setLoading(false)
+      return
+    }
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user)
       setLoading(false)
@@ -36,6 +50,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   
 
   const login = async (email: string, password: string) => {
+    if (!auth) {
+      throw new Error('Authentication is not available in this environment')
+    }
+    
     try {
       await signInWithEmailAndPassword(auth, email, password)
     } catch (error: any) {
@@ -58,6 +76,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signup = async (email: string, password: string) => {
+    if (!auth) {
+      throw new Error('Authentication is not available in this environment')
+    }
+    
     try {
       await createUserWithEmailAndPassword(auth, email, password)
     } catch (error: any) {
@@ -78,6 +100,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = async () => {
+    if (!auth) {
+      return
+    }
+    
     try {
       await signOut(auth)
     } catch (error) {
