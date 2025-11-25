@@ -73,8 +73,8 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 min-h-screen">
-      <div className="max-w-md w-full space-y-8">
+    <div className="flex items-center justify-center bg-transparent py-12 px-4 sm:px-6 lg:px-8 min-h-screen">
+      <div className="max-w-md w-full space-y-8 bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-xl">
         <div>
           <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-blue-100">
             <svg className="h-8 w-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

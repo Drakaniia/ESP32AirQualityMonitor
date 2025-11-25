@@ -127,8 +127,8 @@ function DashboardContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="text-center">
+      <div className="min-h-screen flex items-center justify-center bg-transparent">
+        <div className="text-center bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-xl">
           <div className="loading-spinner w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600 font-medium">Loading dashboard...</p>
         </div>
@@ -138,9 +138,9 @@ function DashboardContent() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-transparent">
         <div className="text-center">
-          <div className="bg-white border border-blue-200 text-blue-800 px-8 py-6 rounded-xl shadow-lg mb-6">
+          <div className="bg-white/90 backdrop-blur-sm border border-blue-200 text-blue-800 px-8 py-6 rounded-xl shadow-lg mb-6">
             <h3 className="text-xl font-semibold mb-2">Sign in to continue</h3>
             <p className="text-sm">Please sign in to access your air quality dashboard</p>
           </div>
@@ -175,7 +175,7 @@ function DashboardContent() {
   const stats = getQuickStats()
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-transparent">
       {/* Simulation Banner */}
       <SimulationBanner />
       

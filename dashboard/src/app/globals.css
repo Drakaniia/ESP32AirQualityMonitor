@@ -51,7 +51,7 @@
 }
 
 body {
-  background-color: hsl(var(--background));
+  background-color: transparent;
   color: hsl(var(--foreground));
   font-feature-settings: 'rlig' 1, 'calt' 1;
 }

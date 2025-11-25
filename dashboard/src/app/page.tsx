@@ -15,7 +15,7 @@ export default function HomePage() {
   }, [user, router])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-transparent flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="text-center">
           <div className="mx-auto h-16 w-16 flex items-center justify-center rounded-full bg-blue-100 mb-6">
@@ -31,7 +31,7 @@ export default function HomePage() {
           </p>
         </div>
 
-        <div className="bg-white py-8 px-6 shadow-xl rounded-lg">
+        <div className="bg-white/90 backdrop-blur-sm py-8 px-6 shadow-xl rounded-lg">
           <div className="space-y-6">
             <div className="text-center">
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
