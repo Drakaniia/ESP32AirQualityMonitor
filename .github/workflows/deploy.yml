@@ -31,8 +31,12 @@ jobs:
       env:
         NODE_ENV: production
         
+    - name: Remove README from build output
+      run: rm -f ./dashboard/out/README.md ./dashboard/out/readme.md || true
+      
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./dashboard/out
+        keep_files: false
