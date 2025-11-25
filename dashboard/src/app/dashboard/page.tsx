@@ -27,7 +27,7 @@ interface DeviceCommand {
 }
 
 export default function DashboardPage() {
-  const { user, logout } = useAuth()
+  const { user, logout, loading } = useAuth()
   const router = useRouter()
   const [currentReading, setCurrentReading] = useState<SensorReading | null>(null)
   const [historicalData, setHistoricalData] = useState<SensorReading[]>([])
@@ -35,10 +35,10 @@ export default function DashboardPage() {
   const [deviceOnline, setDeviceOnline] = useState(false)
 
   useEffect(() => {
-    if (!user) {
+    if (!user && !loading) {
       router.push('/login')
     }
-  }, [user, router])
+  }, [user, router, loading])
 
   useEffect(() => {
     if (!user || !auth || !db || !rtdb) return
@@ -110,6 +110,17 @@ export default function DashboardPage() {
 
   
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="loading-spinner w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -176,6 +187,11 @@ export default function DashboardPage() {
                   }
                 </span>
               </div>
+              {!deviceOnline && (
+                <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
+                  ESP32 device is offline
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -184,7 +200,24 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Chart */}
           <div className="lg:col-span-2">
-            <ChartContainer data={historicalData} />
+            {historicalData.length > 0 ? (
+              <ChartContainer data={historicalData} />
+            ) : (
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Sensor Data</h3>
+                <div className="text-center py-8">
+                  <div className="text-gray-400 mb-2">
+                    <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                  </div>
+                  <p className="text-gray-500 mb-2">No sensor data available</p>
+                  <p className="text-sm text-gray-400">
+                    {deviceOnline ? 'Waiting for data from ESP32 device...' : 'ESP32 device is offline. Please check your device connection.'}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Control Panel */}
