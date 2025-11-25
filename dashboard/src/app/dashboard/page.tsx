@@ -38,6 +38,8 @@ function DashboardContent() {
   const [deviceCommands, setDeviceCommands] = useState<DeviceCommand | null>(null)
   const [deviceOnline, setDeviceOnline] = useState(false)
   const [activeTab, setActiveTab] = useState<'overview' | 'charts' | 'history'>('overview')
+  const [error, setError] = useState<string | null>(null)
+  const [authError, setAuthError] = useState<string | null>(null)
 
   // Get data that switches between real and simulated
   const {
@@ -65,10 +67,10 @@ function DashboardContent() {
     // Check if user session is still valid
     const checkAuthStatus = () => {
       if (auth.currentUser && !auth.currentUser.emailVerified) {
-        console.log('Email not verified - showing reminder')
+        setAuthError('Email not verified - please verify your email to continue')
       }
     }
-    
+
     checkAuthStatus()
   }, [user, auth, db, rtdb])
 
@@ -82,41 +84,62 @@ function DashboardContent() {
       limit(100) // Increased limit for better history
     )
 
-    const unsubscribeReadings = onSnapshot(readingsQuery, (snapshot) => {
-      const readings: SensorReading[] = []
-      snapshot.forEach((doc) => {
-        const data = doc.data()
-        readings.push({
-          device_id: data.device_id,
-          ppm: data.ppm,
-          quality: data.quality,
-          relay_state: data.relay_state,
-          timestamp: data.timestamp,
+    const unsubscribeReadings = onSnapshot(
+      readingsQuery,
+      (snapshot) => {
+        const readings: SensorReading[] = []
+        snapshot.forEach((doc) => {
+          const data = doc.data()
+          readings.push({
+            device_id: data.device_id,
+            ppm: data.ppm,
+            quality: data.quality,
+            relay_state: data.relay_state,
+            timestamp: data.timestamp,
+          })
         })
-      })
-      setHistoricalData(readings.reverse())
-      if (readings.length > 0) {
-        setCurrentReading(readings[readings.length - 1])
+        setHistoricalData(readings.reverse())
+        if (readings.length > 0) {
+          setCurrentReading(readings[readings.length - 1])
+        }
+      },
+      (error) => {
+        console.error('Error fetching sensor readings:', error)
+        setError(`Failed to fetch sensor data: ${error.message}`)
       }
-    })
+    )
 
     // Listen for device commands
     const commandsRef = ref(rtdb, 'commands/esp32_01')
-    const unsubscribeCommands = onValue(commandsRef, (snapshot) => {
-      const data = snapshot.val()
-      if (data) {
-        setDeviceCommands(data)
+    const unsubscribeCommands = onValue(
+      commandsRef,
+      (snapshot) => {
+        const data = snapshot.val()
+        if (data) {
+          setDeviceCommands(data)
+        }
+      },
+      (error) => {
+        console.error('Error fetching device commands:', error)
+        setError(`Failed to fetch device commands: ${error.message}`)
       }
-    })
+    )
 
     // Listen for device status
     const statusRef = ref(rtdb, 'devices/esp32_01')
-    const unsubscribeStatus = onValue(statusRef, (snapshot) => {
-      const data = snapshot.val()
-      if (data) {
-        setDeviceOnline(data.status === 'online')
+    const unsubscribeStatus = onValue(
+      statusRef,
+      (snapshot) => {
+        const data = snapshot.val()
+        if (data) {
+          setDeviceOnline(data.status === 'online')
+        }
+      },
+      (error) => {
+        console.error('Error fetching device status:', error)
+        setError(`Failed to fetch device status: ${error.message}`)
       }
-    })
+    )
 
     return () => {
       unsubscribeReadings()
@@ -178,7 +201,7 @@ function DashboardContent() {
     <div className="min-h-screen bg-transparent">
       {/* Simulation Banner */}
       <SimulationBanner />
-      
+
       {/* Enhanced Header */}
       <header className="bg-white shadow-lg border-b border-gray-200" style={{ marginTop: isSimulated ? '48px' : '0' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -279,8 +302,13 @@ function DashboardContent() {
               <div>
                 <ControlPanel 
                   currentCommands={displayCommands}
-                  onCommandUpdate={(commands) => {
-                    console.log('Updating commands:', commands)
+                  onCommandUpdate={async (commands) => {
+                    try {
+                      console.log('Updating commands:', commands)
+                      // Add actual command update logic here if needed
+                    } catch (err) {
+                      setError('Failed to update device commands: ' + (err instanceof Error ? err.message : 'Unknown error'))
+                    }
                   }}
                 />
               </div>
