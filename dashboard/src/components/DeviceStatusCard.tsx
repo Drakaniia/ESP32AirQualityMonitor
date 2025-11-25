@@ -1,6 +1,7 @@
 'use client'
 
 import { useSensorData } from '@/simulation/SimulationProvider'
+import GlassCard from './GlassCard'
 
 interface DeviceStatusCardProps {
   online: boolean
@@ -53,9 +54,9 @@ export default function DeviceStatusCard({ online, lastUpdate }: DeviceStatusCar
   const connectionQuality = getConnectionQuality()
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 transition-all duration-300 hover:shadow-xl">
+    <GlassCard className="p-6">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-xl font-semibold text-gray-900">Device Status</h3>
+        <h3 className="text-xl font-semibold text-white">Device Status</h3>
         <div className="flex items-center space-x-2">
           <div className={`w-4 h-4 rounded-full ${actualOnline ? 'bg-green-500' : 'bg-red-500'} ${actualOnline ? 'animate-pulse' : ''} shadow-lg`}></div>
           {isSimulated && (
@@ -63,12 +64,10 @@ export default function DeviceStatusCard({ online, lastUpdate }: DeviceStatusCar
           )}
         </div>
       </div>
-      
+
       {/* Main Status Display */}
       <div className="text-center mb-6">
-        <div className={`inline-flex items-center px-6 py-3 rounded-full text-lg font-bold transition-all duration-300 ${
-          actualOnline ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-        }`}>
+        <div className={`inline-flex items-center px-6 py-3 rounded-full text-lg font-bold text-white transition-all duration-300 bg-white/20 backdrop-blur-sm border border-white/30`}>
           {actualOnline ? (
             <>
               <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
@@ -85,46 +84,46 @@ export default function DeviceStatusCard({ online, lastUpdate }: DeviceStatusCar
             </>
           )}
           {isSimulated && (
-            <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">SIM</span>
+            <span className="ml-2 text-xs bg-white/20 text-white px-2 py-1 rounded backdrop-blur-sm border border-white/30">SIM</span>
           )}
         </div>
       </div>
-      
+
       {/* Device Information */}
       <div className="space-y-4">
-        <div className="p-4 bg-gray-50 rounded-lg">
+        <div className="p-4 bg-gray-50/50 backdrop-blur-sm rounded-lg border border-white/30">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600 font-medium">Device ID</span>
-            <span className="text-sm font-bold text-gray-900">{isSimulated ? 'ESP32_SIM_01' : 'ESP32_01'}</span>
+            <span className="text-sm text-white font-medium">Device ID</span>
+            <span className="text-sm font-bold text-white">{isSimulated ? 'ESP32_SIM_01' : 'ESP32_01'}</span>
           </div>
-          
+
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm text-gray-600 font-medium">Last Update</span>
-            <span className="text-sm font-medium text-gray-900">{getTimeSinceLastUpdate()}</span>
+            <span className="text-sm text-white font-medium">Last Update</span>
+            <span className="text-sm font-medium text-white">{getTimeSinceLastUpdate()}</span>
           </div>
-          
+
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600 font-medium">Connection</span>
+            <span className="text-sm text-white font-medium">Connection</span>
             <div className="flex items-center space-x-2">
               <div className={`w-2 h-2 rounded-full ${actualOnline ? 'bg-green-500' : 'bg-red-500'}`}></div>
-              <span className={`text-sm font-semibold ${actualOnline ? 'text-green-600' : 'text-red-600'}`}>
+              <span className={`text-sm font-semibold ${actualOnline ? 'text-white' : 'text-white'}`}>
                 {actualOnline ? 'Connected' : 'Disconnected'}
               </span>
             </div>
           </div>
         </div>
-        
+
         {/* Connection Quality Indicator */}
         {actualOnline && (
-          <div className="p-4 bg-gray-50 rounded-lg">
+          <div className="p-4 bg-gray-50/50 backdrop-blur-sm rounded-lg border border-white/30">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-600 font-medium">Signal Quality</span>
-              <span className={`text-sm font-semibold ${connectionQuality.color}`}>
+              <span className="text-sm text-white font-medium">Signal Quality</span>
+              <span className={`text-sm font-semibold text-white`}>
                 {connectionQuality.quality}
               </span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div 
+            <div className="w-full bg-gray-200/50 rounded-full h-2">
+              <div
                 className={`h-2 rounded-full transition-all duration-300 ${
                   connectionQuality.strength >= 75 ? 'bg-green-500' :
                   connectionQuality.strength >= 50 ? 'bg-blue-500' :
@@ -135,20 +134,20 @@ export default function DeviceStatusCard({ online, lastUpdate }: DeviceStatusCar
             </div>
           </div>
         )}
-        
+
         {/* System Status */}
-        <div className="pt-4 border-t border-gray-200">
+        <div className="pt-4 border-t border-gray-200/30">
           <div className="flex items-center justify-center">
-            <div className={`p-3 rounded-full ${actualOnline ? 'bg-green-100' : 'bg-gray-100'}`}>
-              <svg className={`w-6 h-6 ${actualOnline ? 'text-green-600' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className={`p-3 rounded-full ${actualOnline ? 'bg-green-100/50' : 'bg-gray-100/50'}`}>
+              <svg className={`w-6 h-6 ${actualOnline ? 'text-green-600' : 'text-white'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
               </svg>
             </div>
             <div className="ml-3">
-              <div className={`text-sm font-semibold ${actualOnline ? 'text-green-600' : 'text-gray-500'}`}>
+              <div className={`text-sm font-semibold text-white`}>
                 {actualOnline ? 'System Active' : 'System Inactive'}
               </div>
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-white">
                 {actualOnline ? 'Monitoring正常运行' : 'Awaiting connection'}
                 {isSimulated && ' (Simulated)'}
               </div>
@@ -156,6 +155,6 @@ export default function DeviceStatusCard({ online, lastUpdate }: DeviceStatusCar
           </div>
         </div>
       </div>
-    </div>
+    </GlassCard>
   )
 }

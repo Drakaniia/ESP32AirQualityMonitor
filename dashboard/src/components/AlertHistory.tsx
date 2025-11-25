@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useAlertData } from '@/simulation/SimulationProvider'
+import GlassCard from './GlassCard'
 
 interface SensorReading {
   device_id: string
@@ -83,23 +84,23 @@ export default function AlertHistory({ data }: AlertHistoryProps) {
 
   const getSeverityColor = (severity: AlertEntry['severity']) => {
     switch (severity) {
-      case 'low': return 'bg-green-100 text-green-800 border-green-300'
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-300'
-      case 'high': return 'bg-orange-100 text-orange-800 border-orange-300'
-      case 'critical': return 'bg-red-100 text-red-800 border-red-300'
-      default: return 'bg-gray-100 text-gray-800 border-gray-300'
+      case 'low': return 'bg-green-500/30 text-white border border-green-500/30'
+      case 'medium': return 'bg-yellow-500/30 text-white border border-yellow-500/30'
+      case 'high': return 'bg-orange-500/30 text-white border border-orange-500/30'
+      case 'critical': return 'bg-red-500/30 text-white border border-red-500/30'
+      default: return 'bg-gray-500/30 text-white border border-gray-500/30'
     }
   }
 
   const getQualityColor = (quality: string) => {
     switch (quality) {
-      case 'Excellent': return 'text-green-600 bg-green-100'
-      case 'Good': return 'text-blue-600 bg-blue-100'
-      case 'Moderate': return 'text-yellow-600 bg-yellow-100'
-      case 'Poor': return 'text-orange-600 bg-orange-100'
-      case 'Very Poor': return 'text-red-600 bg-red-100'
-      case 'Hazardous': return 'text-purple-600 bg-purple-100'
-      default: return 'text-gray-600 bg-gray-100'
+      case 'Excellent': return 'text-white bg-green-500/30 border border-green-500/30'
+      case 'Good': return 'text-white bg-blue-500/30 border border-blue-500/30'
+      case 'Moderate': return 'text-white bg-yellow-500/30 border border-yellow-500/30'
+      case 'Poor': return 'text-white bg-orange-500/30 border border-orange-500/30'
+      case 'Very Poor': return 'text-white bg-red-500/30 border border-red-500/30'
+      case 'Hazardous': return 'text-white bg-purple-500/30 border border-purple-500/30'
+      default: return 'text-white bg-gray-500/30 border border-gray-500/30'
     }
   }
 
@@ -137,20 +138,20 @@ export default function AlertHistory({ data }: AlertHistoryProps) {
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 transition-all duration-300 hover:shadow-xl">
+    <GlassCard className="p-6">
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 space-y-4 lg:space-y-0">
         <div className="flex items-center space-x-3">
-          <h3 className="text-xl font-semibold text-gray-900">Alert History & Logs</h3>
+          <h3 className="text-xl font-semibold text-white/95">Alert History & Logs</h3>
           {isSimulated && (
-            <div className="flex items-center space-x-1">
+            <div className="flex items-center space-x-1.5 bg-yellow-500/20 px-2 py-1 rounded-full">
               <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
-              <span className="text-xs text-yellow-600 font-medium">SIMULATED</span>
+              <span className="text-xs font-medium text-white/90">SIMULATED</span>
             </div>
           )}
         </div>
         <button
           onClick={exportToCSV}
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors duration-200"
+          className="px-4 py-2 bg-white/20 text-white text-sm font-medium rounded-md hover:bg-white/30 transition-colors duration-200 backdrop-blur-sm border border-white/30"
         >
           Export CSV
         </button>
@@ -167,7 +168,7 @@ export default function AlertHistory({ data }: AlertHistoryProps) {
               setSearchTerm(e.target.value)
               setCurrentPage(1)
             }}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+            className="w-full px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200 bg-white/20 backdrop-blur-sm text-white placeholder:text-gray-300 border border-white/30"
           />
         </div>
         <div className="flex gap-2">
@@ -181,7 +182,7 @@ export default function AlertHistory({ data }: AlertHistoryProps) {
               className={`px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
                 severityFilter === severity
                   ? 'bg-blue-600 text-white shadow-md'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  : 'bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/30'
               }`}
             >
               {severity === 'all' ? 'All' : severity.charAt(0).toUpperCase() + severity.slice(1)}
@@ -192,29 +193,29 @@ export default function AlertHistory({ data }: AlertHistoryProps) {
 
       {/* Statistics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="text-center p-3 bg-blue-50 rounded-lg">
-          <div className="text-2xl font-bold text-blue-900">{filteredAlerts.length}</div>
-          <div className="text-xs text-blue-700 font-medium">Total Alerts</div>
+        <div className="text-center p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
+          <div className="text-2xl font-bold text-white/90">{filteredAlerts.length}</div>
+          <div className="text-xs text-white/90 font-medium">Total Alerts</div>
         </div>
-        <div className="text-center p-3 bg-green-50 rounded-lg">
-          <div className="text-2xl font-bold text-green-900">
+        <div className="text-center p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
+          <div className="text-2xl font-bold text-white/90">
             {filteredAlerts.filter(a => a.severity === 'low').length}
           </div>
-          <div className="text-xs text-green-700 font-medium">Low Severity</div>
+          <div className="text-xs text-white/90 font-medium">Low Severity</div>
         </div>
-        <div className="text-center p-3 bg-orange-50 rounded-lg">
-          <div className="text-2xl font-bold text-orange-900">
+        <div className="text-center p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
+          <div className="text-2xl font-bold text-white/90">
             {filteredAlerts.filter(a => a.severity === 'high' || a.severity === 'critical').length}
           </div>
-          <div className="text-xs text-orange-700 font-medium">High/Critical</div>
+          <div className="text-xs text-white/90 font-medium">High/Critical</div>
         </div>
-        <div className="text-center p-3 bg-purple-50 rounded-lg">
-          <div className="text-2xl font-bold text-purple-900">
-            {filteredAlerts.length > 0 ? 
-              (filteredAlerts.filter(a => a.severity === 'high' || a.severity === 'critical').length / filteredAlerts.length * 100).toFixed(1) 
+        <div className="text-center p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
+          <div className="text-2xl font-bold text-white/90">
+            {filteredAlerts.length > 0 ?
+              (filteredAlerts.filter(a => a.severity === 'high' || a.severity === 'critical').length / filteredAlerts.length * 100).toFixed(1)
               : 0}%
           </div>
-          <div className="text-xs text-purple-700 font-medium">Critical Rate</div>
+          <div className="text-xs text-white/90 font-medium">Critical Rate</div>
         </div>
       </div>
 
@@ -224,26 +225,26 @@ export default function AlertHistory({ data }: AlertHistoryProps) {
           paginatedAlerts.map((alert) => (
             <div
               key={alert.id}
-              className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+              className="p-4 border border-white/30 rounded-lg backdrop-blur-sm hover:bg-white/10 transition-colors duration-200 bg-white/10"
             >
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div className="flex items-center space-x-3">
                   <span className="text-2xl">{getSeverityIcon(alert.severity)}</span>
                   <div>
                     <div className="flex items-center space-x-2 mb-1">
-                      <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full border ${getSeverityColor(alert.severity)}`}>
+                      <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${getSeverityColor(alert.severity)}`}>
                         {alert.severity.toUpperCase()}
                       </span>
                       <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${getQualityColor(alert.quality)}`}>
                         {alert.quality}
                       </span>
                       {alert.isSimulated && (
-                        <span className="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                        <span className="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100/30 text-white backdrop-blur-sm">
                           SIMULATED
                         </span>
                       )}
                     </div>
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-white/90">
                       <span className="font-medium">{alert.ppm.toFixed(1)} PPM</span>
                       <span className="mx-2">•</span>
                       <span>Device: {alert.device_id}</span>
@@ -253,10 +254,10 @@ export default function AlertHistory({ data }: AlertHistoryProps) {
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm font-medium text-gray-900">
+                  <div className="text-sm font-medium text-white/90">
                     {new Date(alert.timestamp).toLocaleDateString()}
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-white/80">
                     {new Date(alert.timestamp).toLocaleTimeString()}
                   </div>
                 </div>
@@ -265,13 +266,13 @@ export default function AlertHistory({ data }: AlertHistoryProps) {
           ))
         ) : (
           <div className="text-center py-8">
-            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="mx-auto h-12 w-12 text-white/90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            <p className="mt-2 text-lg font-medium text-gray-900">No alerts found</p>
-            <p className="text-sm text-gray-500">
-              {searchTerm || severityFilter !== 'all' 
-                ? 'Try adjusting your filters' 
+            <p className="mt-2 text-lg font-medium text-white/90">No alerts found</p>
+            <p className="text-sm text-white/80">
+              {searchTerm || severityFilter !== 'all'
+                ? 'Try adjusting your filters'
                 : 'No sensor data available yet'}
             </p>
           </div>
@@ -281,14 +282,14 @@ export default function AlertHistory({ data }: AlertHistoryProps) {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-700">
+          <div className="text-sm text-white/90">
             Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredAlerts.length)} of {filteredAlerts.length} alerts
           </div>
           <div className="flex space-x-2">
             <button
               onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
-              className="px-3 py-1 text-sm font-medium rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+              className="px-3 py-1 text-sm font-medium rounded-md bg-white/20 text-white hover:bg-white/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 backdrop-blur-sm border border-white/30"
             >
               Previous
             </button>
@@ -303,7 +304,7 @@ export default function AlertHistory({ data }: AlertHistoryProps) {
               } else {
                 pageNum = currentPage - 2 + i
               }
-              
+
               return (
                 <button
                   key={pageNum}
@@ -311,7 +312,7 @@ export default function AlertHistory({ data }: AlertHistoryProps) {
                   className={`px-3 py-1 text-sm font-medium rounded-md transition-colors duration-200 ${
                     currentPage === pageNum
                       ? 'bg-blue-600 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      : 'bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm border border-white/30'
                   }`}
                 >
                   {pageNum}
@@ -321,13 +322,13 @@ export default function AlertHistory({ data }: AlertHistoryProps) {
             <button
               onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
               disabled={currentPage === totalPages}
-              className="px-3 py-1 text-sm font-medium rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+              className="px-3 py-1 text-sm font-medium rounded-md bg-white/20 text-white hover:bg-white/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 backdrop-blur-sm border border-white/30"
             >
               Next
             </button>
           </div>
         </div>
       )}
-    </div>
+    </GlassCard>
   )
 }

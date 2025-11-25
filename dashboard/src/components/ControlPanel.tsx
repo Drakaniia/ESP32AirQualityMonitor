@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useSimulationContext } from '@/simulation/SimulationProvider'
+import GlassCard from './GlassCard'
 
 interface DeviceCommand {
   relay_state: string
@@ -55,11 +56,11 @@ export default function ControlPanel({ currentCommands, onCommandUpdate }: Contr
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h3 className="text-lg font-medium text-gray-900 mb-6">Device Controls</h3>
-      
+    <GlassCard className="p-6">
+      <h3 className="text-lg font-medium text-white mb-6">Device Controls</h3>
+
       {/* Simulation Mode Toggle */}
-      <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+      <div className="mb-6 p-4 bg-gray-50/50 backdrop-blur-sm rounded-lg border border-white/30">
         <div className="flex items-center justify-between mb-3">
           <div>
             <label className="text-sm font-medium text-gray-700">Simulation Mode</label>
@@ -91,8 +92,8 @@ export default function ControlPanel({ currentCommands, onCommandUpdate }: Contr
 
       {/* Simulation Controls */}
       {isSimulationMode && (
-        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <h4 className="text-sm font-medium text-blue-900 mb-3">Simulation Scenarios</h4>
+        <div className="mb-6 p-4 bg-blue-50/50 backdrop-blur-sm border border-blue-200/30 rounded-lg">
+          <h4 className="text-sm font-medium text-white mb-3">Simulation Scenarios</h4>
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => setSimulationScenario('normal')}
@@ -121,11 +122,11 @@ export default function ControlPanel({ currentCommands, onCommandUpdate }: Contr
           </div>
         </div>
       )}
-      
+
       <div className="space-y-6">
         {/* Relay Control */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">
+          <label className="block text-sm font-medium text-white mb-3">
             Relay Control
           </label>
           <button
@@ -140,14 +141,14 @@ export default function ControlPanel({ currentCommands, onCommandUpdate }: Contr
               }`}
             />
           </button>
-          <span className="ml-3 text-sm text-gray-600">
+          <span className="ml-3 text-sm text-white">
             Relay is {relayState === 'ON' ? 'ON' : 'OFF'}
           </span>
         </div>
 
         {/* Sampling Interval */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">
+          <label className="block text-sm font-medium text-white mb-3">
             Sampling Interval: {samplingInterval} seconds
           </label>
           <input
@@ -158,7 +159,7 @@ export default function ControlPanel({ currentCommands, onCommandUpdate }: Contr
             onChange={(e) => handleSamplingIntervalChange(parseInt(e.target.value))}
             className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
           />
-          <div className="flex justify-between text-xs text-gray-500 mt-1">
+          <div className="flex justify-between text-xs text-white mt-1">
             <span>1s</span>
             <span>30s</span>
             <span>60s</span>
@@ -167,7 +168,7 @@ export default function ControlPanel({ currentCommands, onCommandUpdate }: Contr
 
         {/* OLED Message */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">
+          <label className="block text-sm font-medium text-white mb-3">
             OLED Message
           </label>
           <div className="space-y-3">
@@ -177,12 +178,12 @@ export default function ControlPanel({ currentCommands, onCommandUpdate }: Contr
               onChange={(e) => setOledMessage(e.target.value)}
               placeholder="Enter custom message"
               maxLength={50}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              className="w-full px-3 py-2 border border-white/30 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white/20 backdrop-blur-sm text-white"
             />
             <div className="flex space-x-2">
               <button
                 onClick={handleOledMessageSend}
-                className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="flex-1 px-3 py-2 bg-white/30 backdrop-blur-sm text-white text-sm font-medium rounded-md hover:bg-white/40 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 border border-white/30"
               >
                 Send Message
               </button>
@@ -191,27 +192,27 @@ export default function ControlPanel({ currentCommands, onCommandUpdate }: Contr
                   setOledMessage('CLEAR')
                   onCommandUpdate({ oled_message: 'CLEAR', last_update: Date.now() })
                 }}
-                className="px-3 py-2 bg-gray-600 text-white text-sm font-medium rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                className="px-3 py-2 bg-white/30 backdrop-blur-sm text-white text-sm font-medium rounded-md hover:bg-white/40 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 border border-white/30"
               >
                 Clear
               </button>
             </div>
           </div>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-white mt-1">
             Type "CLEAR" to clear the display
           </p>
         </div>
 
         {/* Quick Actions */}
-        <div className="pt-4 border-t border-gray-200">
-          <h4 className="text-sm font-medium text-gray-700 mb-3">Quick Actions</h4>
+        <div className="pt-4 border-t border-gray-200/30">
+          <h4 className="text-sm font-medium text-white mb-3">Quick Actions</h4>
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => {
                 setOledMessage('Air Quality OK')
                 onCommandUpdate({ oled_message: 'Air Quality OK', last_update: Date.now() })
               }}
-              className="px-3 py-2 bg-green-100 text-green-800 text-xs font-medium rounded hover:bg-green-200"
+              className="px-3 py-2 bg-white/20 backdrop-blur-sm text-white text-xs font-medium rounded hover:bg-white/30 border border-white/30"
             >
               Status OK
             </button>
@@ -220,7 +221,7 @@ export default function ControlPanel({ currentCommands, onCommandUpdate }: Contr
                 setOledMessage('Warning!')
                 onCommandUpdate({ oled_message: 'Warning!', last_update: Date.now() })
               }}
-              className="px-3 py-2 bg-yellow-100 text-yellow-800 text-xs font-medium rounded hover:bg-yellow-200"
+              className="px-3 py-2 bg-white/20 backdrop-blur-sm text-white text-xs font-medium rounded hover:bg-white/30 border border-white/30"
             >
               Warning
             </button>
@@ -228,7 +229,7 @@ export default function ControlPanel({ currentCommands, onCommandUpdate }: Contr
               onClick={() => {
                 handleRelayToggle()
               }}
-              className="px-3 py-2 bg-blue-100 text-blue-800 text-xs font-medium rounded hover:bg-blue-200"
+              className="px-3 py-2 bg-white/20 backdrop-blur-sm text-white text-xs font-medium rounded hover:bg-white/30 border border-white/30"
             >
               Toggle Relay
             </button>
@@ -236,7 +237,7 @@ export default function ControlPanel({ currentCommands, onCommandUpdate }: Contr
               onClick={() => {
                 handleSamplingIntervalChange(10)
               }}
-              className="px-3 py-2 bg-purple-100 text-purple-800 text-xs font-medium rounded hover:bg-purple-200"
+              className="px-3 py-2 bg-white/20 backdrop-blur-sm text-white text-xs font-medium rounded hover:bg-white/30 border border-white/30"
             >
               Reset (10s)
             </button>
@@ -245,13 +246,13 @@ export default function ControlPanel({ currentCommands, onCommandUpdate }: Contr
 
         {/* Last Update */}
         {currentCommands && (
-          <div className="pt-4 border-t border-gray-200">
-            <p className="text-xs text-gray-500">
+          <div className="pt-4 border-t border-gray-200/30">
+            <p className="text-xs text-white">
               Last command sent: {new Date(currentCommands.last_update).toLocaleString()}
             </p>
           </div>
         )}
       </div>
-    </div>
+    </GlassCard>
   )
 }
