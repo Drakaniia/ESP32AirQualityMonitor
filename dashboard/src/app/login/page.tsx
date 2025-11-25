@@ -146,7 +146,7 @@ export default function LoginPage() {
 
           <div className="pt-1">
             <GlassButton
-              onClick={async (e) => { 
+              onClick={async (e) => {
                 e.preventDefault();
 
                 // Use the shared validation function
@@ -181,7 +181,7 @@ export default function LoginPage() {
                   setLoading(false);
                 }
               }}
-              className="max-w-xs w-full text-center py-2"
+              className="w-full text-center py-2"
               disabled={loading}
             >
               {loading ? (
@@ -192,10 +192,10 @@ export default function LoginPage() {
             </GlassButton>
           </div>
 
-          <div className="text-center space-y-2">
+          <div className="text-center space-y-1">
             <button
               type="button"
-              className="text-white/80 hover:text-white text-sm px-4 py-2 rounded-lg backdrop-blur-sm bg-white/10 hover:bg-white/20 transition-all duration-200"
+              className="text-white/60 text-sm px-3 py-1 rounded-lg"
               onClick={() => {
                 setIsSignUp(!isSignUp)
                 setError('')
@@ -209,7 +209,7 @@ export default function LoginPage() {
               <div>
                 <button
                   type="button"
-                  className="text-white/60 hover:text-white text-sm px-4 py-2 rounded-lg backdrop-blur-sm bg-white/10 hover:bg-white/20 transition-all duration-200"
+                  className="text-white/60 text-sm px-3 py-1 rounded-lg"
                   onClick={() => setShowPasswordReset(!showPasswordReset)}
                 >
                   Forgot your password?
