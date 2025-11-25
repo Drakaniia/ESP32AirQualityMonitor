@@ -1,0 +1,78 @@
+# PlatformIO
+.pio/
+.vscode/
+*.tmp
+*.bak
+
+# Build artifacts
+build/
+dist/
+*.bin
+*.elf
+*.hex
+*.map
+
+# IDE files
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Node.js (for dashboard)
+dashboard/node_modules/
+dashboard/.next/
+dashboard/out/
+dashboard/build/
+dashboard/.env.local
+dashboard/.env.development.local
+dashboard/.env.test.local
+dashboard/.env.production.local
+dashboard/npm-debug.log*
+dashboard/yarn-debug.log*
+dashboard/yarn-error.log*
+
+# Logs
+logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# Dependency directories
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Micro-controller specific
+*.pyc
+__pycache__/
+
+# Firebase
+firebase-debug.log
+firebase-debug.*.log
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
