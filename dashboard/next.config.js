@@ -3,16 +3,11 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   images: {
-    domains: ['firebasestorage.googleapis.com'],
     unoptimized: true,
   },
-  env: {
-    customKey: process.env.customKey,
-  },
-  // GitHub Pages configuration
-  // basePath: '/ESP32AirQualityMonitor',
-  // assetPrefix: '/ESP32AirQualityMonitor',
+  output: 'export',
   trailingSlash: true,
+  assetPrefix: '/ESP32AirQualityMonitor',
 }
 
 module.exports = nextConfig
