@@ -44,151 +44,26 @@ Responsive Web Dashboard (Next.js / React)
 - Breadboard and Jumper Wires
 - Micro USB Cable
 
-### Wiring Diagram
 
-#### Comprehensive Circuit Diagram
+#### Pin Connection Table
 
-```mermaid
-graph TB
-    subgraph "ESP32 Dev Board"
-        ESP32[ESP32 Chip]
-        GPIO21[GPIO21 - SDA]
-        GPIO22[GPIO22 - SCL]
-        GPIO34[GPIO34 - AOUT]
-        GPIO26[GPIO26 - RELAY IN]
-        VCC33["3.3V Power"]
-        GND["GND"]
-        VCC5["5V Power"]
-    end
-    
-    subgraph "MQ-135 Gas Sensor"
-        MQ135[MQ-135 Chip]
-        MQ_VCC["VCC (5V)"]
-        MQ_GND["GND"]
-        MQ_AOUT["AOUT (Analog Output)"]
-    end
-    
-    subgraph "0.96\" OLED Display (I2C)"
-        OLED[SSD1306 Display]
-        OLED_VCC["VCC (3.3V)"]
-        OLED_GND["GND"]
-        OLED_SDA["SDA (Data)"]
-        OLED_SCL["SCL (Clock)"]
-    end
-    
-    subgraph "5V Relay Module"
-        RELAY[Relay Module]
-        RELAY_VCC["VCC (5V)"]
-        RELAY_GND["GND"]
-        RELAY_IN["IN (Control)"]
-    end
-    
-    subgraph "Power Supply"
-        POWER["USB/Micro USB (5V)"]
-    end
-    
-    %% Wiring connections
-    GPIO21 --- OLED_SDA
-    GPIO22 --- OLED_SCL
-    GPIO34 --- MQ_AOUT
-    GPIO26 --- RELAY_IN
-    
-    VCC33 --- OLED_VCC
-    VCC5 --- MQ_VCC
-    VCC5 --- RELAY_VCC
-    VCC5 --- POWER
-    
-    GND --- MQ_GND
-    GND --- OLED_GND
-    GND --- RELAY_GND
-    
-    %% Styling
-    classDef esp32 fill:#e1f5fe
-    classDef sensor fill:#f3e5f5
-    classDef display fill:#e8f5e8
-    classDef relay fill:#fff3e0
-    classDef power fill:#ffebee
-    
-    class ESP32,GPIO21,GPIO22,GPIO34,GPIO26,VCC33,GND,VCC5 esp32
-    class MQ135,MQ_VCC,MQ_GND,MQ_AOUT sensor
-    class OLED,OLED_VCC,OLED_GND,OLED_SDA,OLED_SCL display
-    class RELAY,RELAY_VCC,RELAY_GND,RELAY_IN relay
-    class POWER power
-```
-
-#### Pin-Level Connections
-
-| Component | Pin/Function | ESP32 Pin |
-|-----------|--------------|-----------|
-| OLED Display | VCC | 3.3V |
-| OLED Display | GND | GND |
-| OLED Display | SDA | GPIO21 |
-| OLED Display | SCL | GPIO22 |
-| MQ-135 Sensor | VCC | 5V |
-| MQ-135 Sensor | GND | GND |
-| MQ-135 Sensor | AOUT | GPIO34 |
-| Relay Module | VCC | 5V |
-| Relay Module | GND | GND |
-| Relay Module | IN | GPIO26 |
-
-#### Visual Wiring Diagram
-
-```mermaid
-graph LR
-    subgraph "ESP32 Air Quality Monitor Circuit"
-        direction TB
-        ESP32["ESP32 Dev Board"]
-        
-        subgraph "Power Connections"
-            VCC["5V Supply"]
-            GND["Ground (0V)"]
-        end
-        
-        subgraph "Sensors & Displays"
-            MQ135["MQ-135 Gas Sensor"]
-            OLED["0.96\" SSD1306 OLED Display"]
-            RELAY["5V Relay Module"]
-        end
-        
-        subgraph "Load"
-            LOAD["External Device<br/>(Connected via Relay)"]
-        end
-    end
-    
-    %% Power connections
-    VCC --> ESP32
-    VCC --> MQ135
-    VCC --> RELAY
-    ESP32 --> OLED
-    
-    GND --> ESP32
-    GND --> MQ135
-    GND --> OLED
-    GND --> RELAY
-    
-    %% Signal connections
-    ESP32 --- GPIO21["GPIO21<br/>(SDA)"] --- OLED
-    ESP32 --- GPIO22["GPIO22<br/>(SCL)"] --- OLED
-    ESP32 --- GPIO34["GPIO34<br/>(AOUT)"] --- MQ135
-    ESP32 --- GPIO26["GPIO26<br/>(Relay IN)"] --- RELAY
-    
-    RELAY --- LOAD
-    
-    %% Styling
-    classDef esp32 fill:#bbdefb
-    classDef power fill:#ffcdd2
-    classDef sensor fill:#d1c4e9
-    classDef display fill:#c8e6c9
-    classDef relay fill:#fff9c4
-    classDef load fill:#ffecb3
-    
-    class ESP32 esp32
-    class VCC,GND power
-    class MQ135 sensor
-    class OLED display
-    class RELAY relay
-    class LOAD load
-```
+| Component | Component Pin | Wire Color (Suggested) | ESP32 Pin | Function |
+|-----------|---------------|------------------------|-----------|----------|
+| **OLED Display** |
+| OLED | VCC | Red | 3.3V | Power Supply |
+| OLED | GND | Black | GND | Ground |
+| OLED | SDA | Blue | GPIO21 | I2C Data |
+| OLED | SCL | Yellow | GPIO22 | I2C Clock |
+| **MQ-135 Sensor** |
+| MQ-135 | VCC | Red | 5V | Power Supply |
+| MQ-135 | GND | Black | GND | Ground |
+| MQ-135 | AOUT | Green | GPIO34 | Analog Output |
+| MQ-135 | DOUT | (Not Used) | - | Digital Out (Optional) |
+| **Relay Module** |
+| Relay | VCC | Red | 5V | Power Supply |
+| Relay | GND | Black | GND | Ground |
+| Relay | IN | Orange | GPIO26 | Control Signal |
+| Relay | NC/NO/COM | - | - | Load Connection |
 
 ## Quick Start
 
