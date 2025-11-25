@@ -10,8 +10,8 @@ const nextConfig = {
     customKey: process.env.customKey,
   },
   // GitHub Pages configuration
-  basePath: process.env.NODE_ENV === 'production' ? '/ESP32AirQualityMonitor' : '',
-  assetPrefix: process.env.NODE_ENV === 'production' ? '/ESP32AirQualityMonitor' : '',
+  basePath: '/ESP32AirQualityMonitor',
+  assetPrefix: '/ESP32AirQualityMonitor',
   // Enable static export for GitHub Pages
   output: 'export',
   trailingSlash: true,
