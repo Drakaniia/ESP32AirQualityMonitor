@@ -9,6 +9,10 @@ const nextConfig = {
   trailingSlash: true,
   // Ensure proper asset prefix for subdirectory deployment
   assetPrefix: process.env.NODE_ENV === 'production' ? '' : undefined,
+  // enable experimental features if needed
+  experimental: {
+    appDir: true,
+  },
 }
 
 module.exports = nextConfig
