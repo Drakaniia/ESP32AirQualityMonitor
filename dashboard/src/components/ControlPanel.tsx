@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useSimulationContext } from '@/simulation/SimulationProvider'
 
 interface DeviceCommand {
   relay_state: string
@@ -15,6 +16,7 @@ interface ControlPanelProps {
 }
 
 export default function ControlPanel({ currentCommands, onCommandUpdate }: ControlPanelProps) {
+  const { isSimulationMode, startSimulation, stopSimulation, setSimulationScenario, updateSimulationCommand } = useSimulationContext()
   const [relayState, setRelayState] = useState(currentCommands?.relay_state || 'OFF')
   const [samplingInterval, setSamplingInterval] = useState(currentCommands?.sampling_interval || 5)
   const [oledMessage, setOledMessage] = useState(currentCommands?.oled_message || '')
@@ -22,16 +24,31 @@ export default function ControlPanel({ currentCommands, onCommandUpdate }: Contr
   const handleRelayToggle = () => {
     const newState = relayState === 'ON' ? 'OFF' : 'ON'
     setRelayState(newState)
-    onCommandUpdate({ relay_state: newState, last_update: Date.now() })
+    
+    if (isSimulationMode) {
+      updateSimulationCommand({ relay_state: newState, last_update: Date.now() })
+    } else {
+      onCommandUpdate({ relay_state: newState, last_update: Date.now() })
+    }
   }
 
   const handleSamplingIntervalChange = (newInterval: number) => {
     setSamplingInterval(newInterval)
-    onCommandUpdate({ sampling_interval: newInterval, last_update: Date.now() })
+    
+    if (isSimulationMode) {
+      updateSimulationCommand({ sampling_interval: newInterval, last_update: Date.now() })
+    } else {
+      onCommandUpdate({ sampling_interval: newInterval, last_update: Date.now() })
+    }
   }
 
   const handleOledMessageSend = () => {
-    onCommandUpdate({ oled_message: oledMessage, last_update: Date.now() })
+    if (isSimulationMode) {
+      updateSimulationCommand({ oled_message: oledMessage, last_update: Date.now() })
+    } else {
+      onCommandUpdate({ oled_message: oledMessage, last_update: Date.now() })
+    }
+    
     if (oledMessage === 'CLEAR') {
       setOledMessage('')
     }
@@ -40,6 +57,70 @@ export default function ControlPanel({ currentCommands, onCommandUpdate }: Contr
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <h3 className="text-lg font-medium text-gray-900 mb-6">Device Controls</h3>
+      
+      {/* Simulation Mode Toggle */}
+      <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <label className="text-sm font-medium text-gray-700">Simulation Mode</label>
+            <p className="text-xs text-gray-500">Generate fake sensor data for testing</p>
+          </div>
+          <button
+            onClick={() => {
+              if (isSimulationMode) {
+                stopSimulation()
+              } else {
+                startSimulation()
+              }
+            }}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+              isSimulationMode ? 'bg-green-600' : 'bg-gray-200'
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                isSimulationMode ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
+        <div className={`text-xs ${isSimulationMode ? 'text-green-600' : 'text-gray-500'}`}>
+          {isSimulationMode ? '✅ Simulation Active - Using fake data' : '📡 Real Mode - Using device data'}
+        </div>
+      </div>
+
+      {/* Simulation Controls */}
+      {isSimulationMode && (
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <h4 className="text-sm font-medium text-blue-900 mb-3">Simulation Scenarios</h4>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => setSimulationScenario('normal')}
+              className="px-3 py-2 bg-green-100 text-green-800 text-xs font-medium rounded hover:bg-green-200 transition-colors"
+            >
+              Normal (150-250 PPM)
+            </button>
+            <button
+              onClick={() => setSimulationScenario('warning')}
+              className="px-3 py-2 bg-yellow-100 text-yellow-800 text-xs font-medium rounded hover:bg-yellow-200 transition-colors"
+            >
+              Warning (300-500 PPM)
+            </button>
+            <button
+              onClick={() => setSimulationScenario('critical')}
+              className="px-3 py-2 bg-red-100 text-red-800 text-xs font-medium rounded hover:bg-red-200 transition-colors"
+            >
+              Critical (600-1000 PPM)
+            </button>
+            <button
+              onClick={() => setSimulationScenario('recovery')}
+              className="px-3 py-2 bg-blue-100 text-blue-800 text-xs font-medium rounded hover:bg-blue-200 transition-colors"
+            >
+              Recovery Mode
+            </button>
+          </div>
+        </div>
+      )}
       
       <div className="space-y-6">
         {/* Relay Control */}

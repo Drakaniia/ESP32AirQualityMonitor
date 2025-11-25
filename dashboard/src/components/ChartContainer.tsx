@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useSensorData } from '@/simulation/SimulationProvider'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -39,6 +40,12 @@ interface ChartContainerProps {
 }
 
 export default function ChartContainer({ data }: ChartContainerProps) {
+  const { isSimulated } = useSensorData({ 
+    currentReading: null, 
+    historicalData: data, 
+    deviceOnline: false, 
+    deviceCommands: null 
+  })
   const [timeRange, setTimeRange] = useState<'1h' | '6h' | '24h' | '7d' | 'all'>('24h')
   const [filteredData, setFilteredData] = useState(data)
   const [isLive, setIsLive] = useState(true)
@@ -274,12 +281,20 @@ export default function ChartContainer({ data }: ChartContainerProps) {
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 space-y-4 lg:space-y-0">
         <div className="flex items-center space-x-3">
           <h3 className="text-xl font-semibold text-gray-900">Air Quality Trends</h3>
-          {isLive && (timeRange === '1h' || timeRange === '6h') && (
-            <div className="flex items-center space-x-1">
-              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-              <span className="text-xs text-red-600 font-medium">LIVE</span>
-            </div>
-          )}
+          <div className="flex items-center space-x-2">
+            {isLive && (timeRange === '1h' || timeRange === '6h') && (
+              <div className="flex items-center space-x-1">
+                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                <span className="text-xs text-red-600 font-medium">LIVE</span>
+              </div>
+            )}
+            {isSimulated && (
+              <div className="flex items-center space-x-1">
+                <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+                <span className="text-xs text-yellow-600 font-medium">SIM</span>
+              </div>
+            )}
+          </div>
         </div>
         
         <div className="flex flex-wrap items-center gap-2">

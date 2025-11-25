@@ -3,12 +3,14 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/components/AuthProvider'
 import { useRouter } from 'next/navigation'
+import { SimulationProvider, useSensorData, useAlertData } from '@/simulation/SimulationProvider'
 import AirQualityCard from '@/components/AirQualityCard'
 import DeviceStatusCard from '@/components/DeviceStatusCard'
 import ControlPanel from '@/components/ControlPanel'
 import ChartContainer from '@/components/ChartContainer'
 import SafetyStatus from '@/components/SafetyStatus'
 import AlertHistory from '@/components/AlertHistory'
+import SimulationBanner from '@/components/SimulationBanner'
 import { db, rtdb, auth } from '@/lib/firebase'
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore'
 import { ref, onValue } from 'firebase/database'
@@ -28,7 +30,7 @@ interface DeviceCommand {
   last_update: number
 }
 
-export default function DashboardPage() {
+function DashboardContent() {
   const { user, logout, loading } = useAuth()
   const router = useRouter()
   const [currentReading, setCurrentReading] = useState<SensorReading | null>(null)
@@ -36,6 +38,20 @@ export default function DashboardPage() {
   const [deviceCommands, setDeviceCommands] = useState<DeviceCommand | null>(null)
   const [deviceOnline, setDeviceOnline] = useState(false)
   const [activeTab, setActiveTab] = useState<'overview' | 'charts' | 'history'>('overview')
+
+  // Get data that switches between real and simulated
+  const {
+    currentReading: displayReading,
+    historicalData: displayData,
+    deviceOnline: displayOnline,
+    deviceCommands: displayCommands,
+    isSimulated
+  } = useSensorData({
+    currentReading,
+    historicalData,
+    deviceOnline,
+    deviceCommands
+  })
 
   useEffect(() => {
     if (!user && !loading) {
@@ -140,16 +156,16 @@ export default function DashboardPage() {
   }
 
   const getQuickStats = () => {
-    if (historicalData.length === 0) return { total: 0, avg24h: 0, alerts: 0 }
+    if (displayData.length === 0) return { total: 0, avg24h: 0, alerts: 0 }
     
-    const total = historicalData.length
-    const recent24h = historicalData.filter(r => 
+    const total = displayData.length
+    const recent24h = displayData.filter(r => 
       new Date(r.timestamp) > new Date(Date.now() - 24 * 60 * 60 * 1000)
     )
     const avg24h = recent24h.length > 0 
       ? recent24h.reduce((sum, r) => sum + r.ppm, 0) / recent24h.length
       : 0
-    const alerts = historicalData.filter(r => 
+    const alerts = displayData.filter(r => 
       ['Poor', 'Very Poor', 'Hazardous'].includes(r.quality)
     ).length
     
@@ -160,8 +176,11 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      {/* Simulation Banner */}
+      <SimulationBanner />
+      
       {/* Enhanced Header */}
-      <header className="bg-white shadow-lg border-b border-gray-200">
+      <header className="bg-white shadow-lg border-b border-gray-200" style={{ marginTop: isSimulated ? '48px' : '0' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-3">
@@ -220,12 +239,12 @@ export default function DashboardPage() {
         {activeTab === 'overview' && (
           <div className="space-y-6">
             {/* Safety Status - Top Priority */}
-            <SafetyStatus reading={currentReading} deviceOnline={deviceOnline} />
+            <SafetyStatus reading={displayReading} deviceOnline={displayOnline} />
 
             {/* Status Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <AirQualityCard reading={currentReading} />
-              <DeviceStatusCard online={deviceOnline} lastUpdate={currentReading?.timestamp} />
+              <AirQualityCard reading={displayReading} />
+              <DeviceStatusCard online={displayOnline} lastUpdate={displayReading?.timestamp} />
               <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Stats</h3>
                 <div className="space-y-3">
@@ -259,7 +278,7 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div>
                 <ControlPanel 
-                  currentCommands={deviceCommands}
+                  currentCommands={displayCommands}
                   onCommandUpdate={(commands) => {
                     console.log('Updating commands:', commands)
                   }}
@@ -268,7 +287,7 @@ export default function DashboardPage() {
               <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
                 <div className="space-y-3">
-                  {historicalData.slice(-5).reverse().map((reading, index) => (
+                  {displayData.slice(-5).reverse().map((reading, index) => (
                     <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center space-x-3">
                         <div className={`w-2 h-2 rounded-full ${
@@ -286,7 +305,7 @@ export default function DashboardPage() {
                       </div>
                     </div>
                   ))}
-                  {historicalData.length === 0 && (
+                  {displayData.length === 0 && (
                     <div className="text-center py-8 text-gray-500">
                       <svg className="w-8 h-8 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -303,8 +322,8 @@ export default function DashboardPage() {
         {/* Charts Tab */}
         {activeTab === 'charts' && (
           <div className="space-y-6">
-            {historicalData.length > 0 ? (
-              <ChartContainer data={historicalData} />
+            {displayData.length > 0 ? (
+              <ChartContainer data={displayData} />
             ) : (
               <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-200">
                 <div className="text-center py-8">
@@ -315,7 +334,8 @@ export default function DashboardPage() {
                   </div>
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No sensor data available</h3>
                   <p className="text-gray-500">
-                    {deviceOnline ? 'Waiting for data from ESP32 device...' : 'ESP32 device is offline. Please check your device connection.'}
+                    {displayOnline ? 'Waiting for data from ESP32 device...' : 'ESP32 device is offline. Please check your device connection.'}
+                    {isSimulated && ' (Simulation will generate data shortly)'}
                   </p>
                 </div>
               </div>
@@ -326,10 +346,18 @@ export default function DashboardPage() {
         {/* History Tab */}
         {activeTab === 'history' && (
           <div className="space-y-6">
-            <AlertHistory data={historicalData} />
+            <AlertHistory data={displayData} />
           </div>
         )}
       </main>
     </div>
+  )
+}
+
+export default function DashboardPage() {
+  return (
+    <SimulationProvider>
+      <DashboardContent />
+    </SimulationProvider>
   )
 }

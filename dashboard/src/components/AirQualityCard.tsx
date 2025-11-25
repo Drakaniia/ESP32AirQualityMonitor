@@ -1,5 +1,7 @@
 'use client'
 
+import { useSensorData } from '@/simulation/SimulationProvider'
+
 interface SensorReading {
   device_id: string
   ppm: number
@@ -13,6 +15,13 @@ interface AirQualityCardProps {
 }
 
 export default function AirQualityCard({ reading }: AirQualityCardProps) {
+  const { isSimulated } = useSensorData({ 
+    currentReading: reading, 
+    historicalData: [], 
+    deviceOnline: false, 
+    deviceCommands: null 
+  })
+
   const getAQIColor = (quality: string) => {
     switch (quality) {
       case 'Excellent':
@@ -106,12 +115,20 @@ export default function AirQualityCard({ reading }: AirQualityCardProps) {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-3">
           <h3 className="text-xl font-semibold text-gray-900">Air Quality</h3>
-          {isLive && (
-            <div className="flex items-center space-x-1">
-              <div className={`w-2 h-2 rounded-full ${getAQIColor(reading.quality)} animate-pulse`}></div>
-              <span className="text-xs text-gray-500 font-medium">LIVE</span>
-            </div>
-          )}
+          <div className="flex items-center space-x-2">
+            {isLive && (
+              <div className="flex items-center space-x-1">
+                <div className={`w-2 h-2 rounded-full ${getAQIColor(reading.quality)} animate-pulse`}></div>
+                <span className="text-xs text-gray-500 font-medium">LIVE</span>
+              </div>
+            )}
+            {isSimulated && (
+              <div className="flex items-center space-x-1">
+                <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+                <span className="text-xs text-yellow-600 font-medium">SIM</span>
+              </div>
+            )}
+          </div>
         </div>
         <div className={`w-4 h-4 rounded-full ${getAQIColor(reading.quality)} animate-pulse shadow-lg`}></div>
       </div>

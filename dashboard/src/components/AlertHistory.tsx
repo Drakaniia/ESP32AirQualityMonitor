@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { useAlertData } from '@/simulation/SimulationProvider'
 
 interface SensorReading {
   device_id: string
@@ -22,38 +23,42 @@ interface AlertEntry {
   severity: 'low' | 'medium' | 'high' | 'critical'
   device_id: string
   relay_state: string
+  isSimulated?: boolean
 }
 
 export default function AlertHistory({ data }: AlertHistoryProps) {
+  const { alerts, isSimulated } = useAlertData(data.map((reading, index) => {
+    let severity: AlertEntry['severity'] = 'low'
+    
+    if (reading.quality === 'Hazardous' || reading.quality === 'Very Poor') {
+      severity = 'critical'
+    } else if (reading.quality === 'Poor') {
+      severity = 'high'
+    } else if (reading.quality === 'Moderate') {
+      severity = 'medium'
+    }
+
+    return {
+      id: `${reading.timestamp}-${index}`,
+      timestamp: reading.timestamp,
+      ppm: reading.ppm,
+      quality: reading.quality,
+      severity,
+      device_id: reading.device_id,
+      relay_state: reading.relay_state,
+      isSimulated: false
+    }
+  }))
+  
   const [searchTerm, setSearchTerm] = useState('')
   const [severityFilter, setSeverityFilter] = useState<'all' | 'low' | 'medium' | 'high' | 'critical'>('all')
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(10)
 
-  // Convert sensor readings to alert entries
+  // Use alerts from simulation or real data
   const alertEntries: AlertEntry[] = useMemo(() => {
-    return data.map((reading, index) => {
-      let severity: AlertEntry['severity'] = 'low'
-      
-      if (reading.quality === 'Hazardous' || reading.quality === 'Very Poor') {
-        severity = 'critical'
-      } else if (reading.quality === 'Poor') {
-        severity = 'high'
-      } else if (reading.quality === 'Moderate') {
-        severity = 'medium'
-      }
-
-      return {
-        id: `${reading.timestamp}-${index}`,
-        timestamp: reading.timestamp,
-        ppm: reading.ppm,
-        quality: reading.quality,
-        severity,
-        device_id: reading.device_id,
-        relay_state: reading.relay_state
-      }
-    }).reverse() // Most recent first
-  }, [data])
+    return alerts
+  }, [alerts])
 
   // Filter alerts based on search and severity
   const filteredAlerts = useMemo(() => {
@@ -134,7 +139,15 @@ export default function AlertHistory({ data }: AlertHistoryProps) {
   return (
     <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 transition-all duration-300 hover:shadow-xl">
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 space-y-4 lg:space-y-0">
-        <h3 className="text-xl font-semibold text-gray-900">Alert History & Logs</h3>
+        <div className="flex items-center space-x-3">
+          <h3 className="text-xl font-semibold text-gray-900">Alert History & Logs</h3>
+          {isSimulated && (
+            <div className="flex items-center space-x-1">
+              <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+              <span className="text-xs text-yellow-600 font-medium">SIMULATED</span>
+            </div>
+          )}
+        </div>
         <button
           onClick={exportToCSV}
           className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors duration-200"
@@ -224,6 +237,11 @@ export default function AlertHistory({ data }: AlertHistoryProps) {
                       <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${getQualityColor(alert.quality)}`}>
                         {alert.quality}
                       </span>
+                      {alert.isSimulated && (
+                        <span className="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                          SIMULATED
+                        </span>
+                      )}
                     </div>
                     <div className="text-sm text-gray-600">
                       <span className="font-medium">{alert.ppm.toFixed(1)} PPM</span>

@@ -1,5 +1,7 @@
 'use client'
 
+import { useSensorData } from '@/simulation/SimulationProvider'
+
 interface SensorReading {
   device_id: string
   ppm: number
@@ -14,6 +16,13 @@ interface SafetyStatusProps {
 }
 
 export default function SafetyStatus({ reading, deviceOnline }: SafetyStatusProps) {
+  const { isSimulated } = useSensorData({ 
+    currentReading: reading, 
+    historicalData: [], 
+    deviceOnline, 
+    deviceCommands: null 
+  })
+
   const getSafetyStatus = () => {
     if (!deviceOnline) {
       return {
@@ -102,12 +111,20 @@ export default function SafetyStatus({ reading, deviceOnline }: SafetyStatusProp
     <div className={`bg-white rounded-xl shadow-lg p-6 border-2 ${safetyStatus.color} transition-all duration-300 hover:shadow-xl`}>
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-xl font-semibold text-gray-900">Overall Safety Status</h3>
-        {isDataFresh && deviceOnline && (
-          <div className="flex items-center space-x-1">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            <span className="text-xs text-green-600 font-medium">LIVE</span>
-          </div>
-        )}
+        <div className="flex items-center space-x-2">
+          {isDataFresh && deviceOnline && (
+            <div className="flex items-center space-x-1">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span className="text-xs text-green-600 font-medium">LIVE</span>
+            </div>
+          )}
+          {isSimulated && (
+            <div className="flex items-center space-x-1">
+              <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+              <span className="text-xs text-yellow-600 font-medium">SIM</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Main Status Display */}
