@@ -2,7 +2,7 @@
 
 A comprehensive IoT system for real-time air quality monitoring using ESP32, MQ-135 sensor, and Firebase integration with a responsive web dashboard.
 
-## 🌟 Features
+## Features
 
 ### ESP32 Device
 - **Real-time Sensing**: MQ-135 air quality sensor with PPM readings
@@ -19,7 +19,7 @@ A comprehensive IoT system for real-time air quality monitoring using ESP32, MQ-
 - **Responsive Design**: Mobile-friendly PWA with install support
 - **Authentication**: Secure Firebase Auth integration
 
-## 🏗️ System Architecture
+## System Architecture
 
 ```
 ESP32 (MQ-135 + OLED + Relay)
@@ -34,7 +34,7 @@ Firebase Backend:
 Responsive Web Dashboard (Next.js / React)
 ```
 
-## 📋 Hardware Requirements
+## Hardware Requirements
 
 ### Components
 - ESP32 Dev Board
@@ -68,7 +68,7 @@ Responsive Web Dashboard (Next.js / React)
 | GND       | GND       |
 | IN        | GPIO26    |
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Firebase Setup
 1. Create a Firebase project with Blaze plan
@@ -89,7 +89,7 @@ Responsive Web Dashboard (Next.js / React)
 ### 4. Deployment
 For complete deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md)
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 ├── src/                    # ESP32 firmware source code
@@ -116,7 +116,7 @@ For complete deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md)
 └── README.md             # This file
 ```
 
-## 🔧 Configuration
+## Configuration
 
 ### ESP32 Firmware
 Edit `src/config.h`:
@@ -135,7 +135,7 @@ NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
 # ... other Firebase config
 ```
 
-## 📊 Air Quality Levels
+## Air Quality Levels
 
 The system categorizes air quality based on PPM readings:
 
@@ -146,7 +146,7 @@ The system categorizes air quality based on PPM readings:
 - **Very Poor**: 400-800 PPM
 - **Hazardous**: > 800 PPM
 
-## 🎮 Dashboard Features
+## Dashboard Features
 
 ### Real-time Monitoring
 - Live PPM readings with color-coded quality indicators
@@ -166,14 +166,14 @@ The system categorizes air quality based on PPM readings:
 - Send custom messages to OLED display
 - Quick action buttons for common commands
 
-## 🔒 Security
+## Security
 
 - Firebase Authentication for dashboard access
 - Firestore and RTDB security rules
 - HTTPS communication with Firebase
 - Input validation and sanitization
 
-## 📱 Mobile Support
+## Mobile Support
 
 The dashboard is a Progressive Web App (PWA):
 - Installable on mobile devices
@@ -181,7 +181,7 @@ The dashboard is a Progressive Web App (PWA):
 - Responsive design for all screen sizes
 - Native app-like experience
 
-## 🛠️ Development
+## Development
 
 ### ESP32 Development
 ```bash
@@ -204,7 +204,7 @@ npm run build  # Production build
 npm run start  # Production server
 ```
 
-## 📈 Monitoring & Maintenance
+## Monitoring & Maintenance
 
 ### Firebase Usage
 - Monitor Firestore read/write operations
@@ -217,7 +217,7 @@ npm run start  # Production server
 - Update firmware for new features
 - Monitor device online status
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch
@@ -225,15 +225,15 @@ npm run start  # Production server
 4. Test thoroughly
 5. Submit a pull request
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## 🆘 Troubleshooting
+## Troubleshooting
 
 For common issues and solutions, see the [Troubleshooting section in DEPLOYMENT.md](./DEPLOYMENT.md#troubleshooting).
 
-## 📞 Support
+## Support
 
 If you encounter issues:
 1. Check the deployment guide
