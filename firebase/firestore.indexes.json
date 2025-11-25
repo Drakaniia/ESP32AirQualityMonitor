@@ -13,16 +13,8 @@
           "order": "DESCENDING"
         }
       ]
-    },
-    {
-      "collectionGroup": "readings",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "timestamp",
-          "order": "DESCENDING"
-        }
-      ]
     }
+    
   ],
   "fieldOverrides": []
+}

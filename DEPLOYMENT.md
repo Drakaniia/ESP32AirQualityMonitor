@@ -31,19 +31,65 @@ This guide will walk you through deploying the complete IoT air quality monitori
    - Go to Authentication → Sign-in method
    - Enable Email/Password provider
 
-### 3. Deploy Firebase Rules
-1. Navigate to the `firebase/` directory
-2. Install Firebase CLI: `npm install -g firebase-tools`
-3. Login to Firebase: `firebase login`
-4. Deploy rules: `firebase deploy --only firestore,database`
+### 3. Install and Configure Firebase CLI
+1. Install Firebase CLI globally:
+   ```bash
+   npm install -g firebase-tools
+   ```
 
-### 4. Get Firebase Configuration
+2. Login to Firebase (opens browser for authentication):
+   ```bash
+   firebase login
+   ```
+   - Allow Gemini features (optional)
+   - Allow usage reporting (optional)
+   - Complete authentication in browser
+
+3. Set up Firebase project in your directory:
+   ```bash
+   cd firebase
+   firebase use your-project-id
+   ```
+   Replace `your-project-id` with your actual Firebase project ID (e.g., `air-quality-monitor-c0862`)
+
+### 4. Deploy Firebase Rules
+1. Navigate to the `firebase/` directory
+2. Deploy Firestore and Realtime Database rules:
+   ```bash
+   firebase deploy --only firestore,database
+   ```
+   This will deploy:
+   - Firestore security rules from `firestore.rules`
+   - Realtime Database rules from `database.rules.json`
+
+3. Verify deployment in Firebase Console:
+   - Firestore → Rules tab should show your security rules
+   - Realtime Database → Rules tab should show your database rules
+
+### 5. Get Firebase Configuration
 1. In Firebase Console, go to Project Settings → General
 2. Under "Your apps", click Web app → Create app
-3. Copy the firebaseConfig object
-4. Also note down:
-   - Project ID
-   - API Key (from Project Settings → Service accounts)
+3. Copy the firebaseConfig object (you'll get something like):
+   ```javascript
+   const firebaseConfig = {
+     apiKey: "AIzaSyAgCNERlOUnJyQsgFFGawHm9gIygUTxwQM",
+     authDomain: "air-quality-monitor-c0862.firebaseapp.com",
+     projectId: "air-quality-monitor-c0862",
+     storageBucket: "air-quality-monitor-c0862.firebasestorage.app",
+     messagingSenderId: "746914538418",
+     appId: "1:746914538418:web:eb6322df4356c117affaab"
+   };
+   ```
+4. Create `.env` file in `dashboard/` directory with these values:
+   ```env
+   NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyAgCNERlOUnJyQsgFFGawHm9gIygUTxwQM
+   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=air-quality-monitor-c0862.firebaseapp.com
+   NEXT_PUBLIC_FIREBASE_PROJECT_ID=air-quality-monitor-c0862
+   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=air-quality-monitor-c0862.firebasestorage.app
+   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=746914538418
+   NEXT_PUBLIC_FIREBASE_APP_ID=1:746914538418:web:eb6322df4356c117affaab
+   NEXT_PUBLIC_FIREBASE_DATABASE_URL=https://air-quality-monitor-c0862-default-rtdb.firebaseio.com
+   ```
 
 ## 📱 ESP32 Firmware Setup
 
