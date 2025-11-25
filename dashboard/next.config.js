@@ -12,8 +12,6 @@ const nextConfig = {
   // GitHub Pages configuration
   basePath: '/ESP32AirQualityMonitor',
   assetPrefix: '/ESP32AirQualityMonitor',
-  // Enable static export for GitHub Pages
-  output: 'export',
   trailingSlash: true,
 }
 
