@@ -27,7 +27,7 @@ interface DeviceCommand {
 }
 
 export default function DashboardPage() {
-  const { user, loading } = useAuth()
+  const { user, loading, logout } = useAuth()
   const router = useRouter()
   const [currentReading, setCurrentReading] = useState<SensorReading | null>(null)
   const [historicalData, setHistoricalData] = useState<SensorReading[]>([])
@@ -117,9 +117,7 @@ export default function DashboardPage() {
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-500">Welcome, {user.email}</span>
               <button
-                onClick={() => {
-                  // Handle logout
-                }}
+                onClick={logout}
                 className="text-sm text-gray-500 hover:text-gray-700"
               >
                 Logout
