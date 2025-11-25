@@ -10,8 +10,8 @@ const nextConfig = {
     customKey: process.env.customKey,
   },
   // GitHub Pages configuration
-  basePath: '/ESP32AirQualityMonitor',
-  assetPrefix: '/ESP32AirQualityMonitor',
+  // basePath: '/ESP32AirQualityMonitor',
+  // assetPrefix: '/ESP32AirQualityMonitor',
   trailingSlash: true,
 }
 
