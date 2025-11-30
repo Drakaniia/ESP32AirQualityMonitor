@@ -2,12 +2,12 @@
 #define CONFIG_H
 
 // WiFi Configuration
-#define WIFI_SSID "YOUR_WIFI_SSID"
-#define WIFI_PASSWORD "YOUR_WIFI_PASSWORD"
+#define WIFI_SSID "SHEESH"
+#define WIFI_PASSWORD "Kenjigwapo_123"
 
 // Firebase Configuration
-#define FIREBASE_PROJECT_ID "your-firebase-project-id"
-#define FIREBASE_API_KEY "your-firebase-api-key"
+#define FIREBASE_PROJECT_ID "air-quality-monitor-c0862"
+#define FIREBASE_API_KEY "AIzaSyAgCNERlOUnJyQsgFFGawHm9gIygUTxwQM"
 #define DEVICE_ID "esp32_01"
 
 // Hardware Pin Configuration

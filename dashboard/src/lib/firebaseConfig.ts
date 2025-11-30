@@ -1,10 +1,13 @@
-import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
-import { getDatabase } from 'firebase/database';
-import { getStorage } from 'firebase/storage';
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
+import { getDatabase } from "firebase/database";
+import { getStorage } from "firebase/storage";
 
 // Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyAgCNERlOUnJyQsgFFGawHm9gIygUTxwQM",
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "air-quality-monitor-c0862.firebaseapp.com",
@@ -24,6 +27,24 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const rtdb = getDatabase(app);
 const storage = getStorage(app);
+let analytics;
 
-export { auth, db, rtdb, storage };
+// Only initialize analytics in browser environment and if not in development
+if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'development') {
+  try {
+    analytics = getAnalytics(app);
+  } catch (error) {
+    console.log('Analytics not available (likely due to ad blockers or SSR)');
+    analytics = null;
+  }
+}
+
+export { 
+  auth, 
+  db, 
+  rtdb, 
+  storage, 
+  analytics 
+};
+
 export default app;
