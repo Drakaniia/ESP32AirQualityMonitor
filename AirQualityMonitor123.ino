@@ -658,7 +658,7 @@ public:
 IoTProtocol::IoTProtocol() : mqttClient(espClient) {
     protocolType = COMM_PROTOCOL;
     isConnected = false;
-    deviceId = "esp32_01";
+    deviceId = DEVICE_ID;
 }
 
 bool IoTProtocol::init(int protocol, String server, String devId) {
@@ -857,6 +857,7 @@ RelayController relay;
 unsigned long lastSensorRead = 0;
 unsigned long lastMQTTUpdate = 0;
 unsigned long lastCommandCheck = 0;
+unsigned long customMessageTime = 0;
 float currentPPM = 0;
 String currentQuality = "";
 bool relayState = false;
@@ -904,6 +905,15 @@ void setup() {
 void loop() {
     unsigned long currentMillis = millis();
 
+    // Check for message timeout
+    if (customMessage.length() > 0 && currentMillis - customMessageTime > 10000) {
+        customMessage = "";
+        customMessageTime = 0;
+        Serial.println("Custom message cleared after 10 seconds");
+        // Force display update to show air quality immediately
+        display.showAirQuality(currentPPM, currentQuality, relayState);
+    }
+
     // Read sensor data at sampling interval
     if (currentMillis - lastSensorRead >= samplingInterval * 1000) {
         lastSensorRead = currentMillis;
@@ -913,9 +923,10 @@ void loop() {
 
         Serial.printf("PPM: %.2f, Quality: %s\n", currentPPM, currentQuality.c_str());
 
-        // Update display
+        // Update display (only if no custom message is active)
         if (customMessage.length() > 0) {
-            display.showCustomMessage(customMessage);
+            // Message is already displayed, but we can refresh it if needed
+            // or just do nothing and let the message stay
         } else {
             display.showAirQuality(currentPPM, currentQuality, relayState);
         }
@@ -925,7 +936,7 @@ void loop() {
     if (currentMillis - lastMQTTUpdate >= MQTT_UPDATE_INTERVAL) {
         lastMQTTUpdate = currentMillis;
 
-        if (iotProtocol.publishSensorData(currentPPM, currentQuality, relayState)) {
+        if (iotProtocol.sendSensorData(currentPPM, currentQuality, relayState)) {
             Serial.println("Data sent to MQTT broker successfully");
         } else {
             Serial.println("Failed to send data to MQTT broker");
@@ -944,6 +955,9 @@ void loop() {
 
     delay(100);
 }
+
+// Forward declaration for processCommands function
+void processCommands(String commandsJson);
 
 // MQTT callback function
 void IoTProtocol::mqttCallback(char* topic, byte* payload, unsigned int length) {
@@ -1049,13 +1063,17 @@ void IoTProtocol::loop() {
 }
 
 void processCommands(String commandsJson) {
+    Serial.printf("Processing command: %s\n", commandsJson.c_str());
+    
     DynamicJsonDocument doc(1024);
     DeserializationError error = deserializeJson(doc, commandsJson);
 
     if (error) {
-        Serial.println("Failed to parse commands JSON");
+        Serial.printf("Failed to parse commands JSON: %s\n", error.c_str());
         return;
     }
+
+    Serial.println("Commands JSON parsed successfully");
 
     // Process relay command
     if (doc.containsKey("relay_state")) {
@@ -1081,11 +1099,18 @@ void processCommands(String commandsJson) {
     if (doc.containsKey("oled_message")) {
         String newMessage = doc["oled_message"];
         customMessage = newMessage;
-        Serial.printf("OLED message: %s\n", customMessage.c_str());
+        customMessageTime = millis(); // Record when message was set
+        Serial.printf("OLED message set to: '%s'\n", customMessage.c_str());
+        
+        // Update display immediately
+        display.showCustomMessage(customMessage);
 
-        // Clear custom message after 10 seconds
+        // Handle CLEAR command immediately
         if (customMessage == "CLEAR") {
             customMessage = "";
+            customMessageTime = 0;
+            Serial.println("OLED message cleared");
+            display.showAirQuality(currentPPM, currentQuality, relayState);
         }
     }
 }

@@ -294,8 +294,6 @@ firebase deploy --only hosting
 # Emulate locally
 firebase emulators:start
 ```
-run tshi BRIDGE_PORT=3002 node mqtt-bridge.js
-
 
 ## Production Deployment
 

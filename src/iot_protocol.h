@@ -41,6 +41,7 @@ private:
     String serverAddress;
     int protocolType;
     bool isConnected;
+    String lastReceivedCommand;
     
     // MQTT callbacks
     static void mqttCallback(char* topic, byte* payload, unsigned int length);

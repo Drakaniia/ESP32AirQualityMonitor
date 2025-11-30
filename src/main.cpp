@@ -22,6 +22,7 @@ RelayController relay;
 unsigned long lastSensorRead = 0;
 unsigned long lastMQTTUpdate = 0;
 unsigned long lastCommandCheck = 0;
+unsigned long customMessageTime = 0;
 float currentPPM = 0;
 String currentQuality = "";
 bool relayState = false;
@@ -83,6 +84,10 @@ void loop() {
         // Update display
         if (customMessage.length() > 0) {
             display.showCustomMessage(customMessage);
+            // Clear custom message after 10 seconds
+            if (millis() - customMessageTime > 10000) {
+                customMessage = "";
+            }
         } else {
             display.showAirQuality(currentPPM, currentQuality, relayState);
         }
@@ -148,9 +153,10 @@ void processCommands(String commandsJson) {
     if (doc.containsKey("oled_message")) {
         String newMessage = doc["oled_message"];
         customMessage = newMessage;
+        customMessageTime = millis();  // Record when message was set
         Serial.printf("OLED message: %s\n", customMessage.c_str());
 
-        // Clear custom message after 10 seconds
+        // Handle clear command
         if (customMessage == "CLEAR") {
             customMessage = "";
         }

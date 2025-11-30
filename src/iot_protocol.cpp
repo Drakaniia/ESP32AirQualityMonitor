@@ -1,6 +1,7 @@
 #include "iot_protocol.h"
 
 WiFiClient espClient;
+IoTProtocol* g_iotProtocol = nullptr;
 
 // Static callback for MQTT
 void IoTProtocol::mqttCallback(char* topic, byte* payload, unsigned int length) {
@@ -10,11 +11,20 @@ void IoTProtocol::mqttCallback(char* topic, byte* payload, unsigned int length) 
         message += (char)payload[i];
     }
     Serial.printf("MQTT Message received on topic %s: %s\n", topic, message.c_str());
+    
+    // Store the command for receiveCommand() to retrieve
+    // Note: This is a static method, so we need to get the instance
+    // For simplicity, we'll use a global variable approach
+    extern IoTProtocol* g_iotProtocol;
+    if (g_iotProtocol) {
+        g_iotProtocol->lastReceivedCommand = message;
+    }
 }
 
 IoTProtocol::IoTProtocol() : mqttClient(espClient) {
     protocolType = COMM_PROTOCOL;
     isConnected = false;
+    g_iotProtocol = this;
 }
 
 bool IoTProtocol::init(int protocol, String server) {
@@ -208,7 +218,11 @@ String IoTProtocol::receiveCommand() {
         case COMM_PROTOCOL_MQTT:
             if (mqttClient.connected()) {
                 mqttClient.loop();  // Process MQTT messages
-                // Command handling is done in callback
+                // Return the stored command and clear it
+                command = lastReceivedCommand;
+                if (command.length() > 0) {
+                    lastReceivedCommand = "";  // Clear after reading
+                }
             }
             break;
             
