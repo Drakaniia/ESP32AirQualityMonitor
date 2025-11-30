@@ -57,18 +57,20 @@ void setup() {
     delay(2000);
 }
 
+void processCommands(String commandsJson);
+
 void loop() {
     unsigned long currentMillis = millis();
-    
+
     // Read sensor data at sampling interval
     if (currentMillis - lastSensorRead >= samplingInterval * 1000) {
         lastSensorRead = currentMillis;
-        
+
         currentPPM = sensor.readPPM();
         currentQuality = sensor.getAirQuality(currentPPM);
-        
+
         Serial.printf("PPM: %.2f, Quality: %s\n", currentPPM, currentQuality.c_str());
-        
+
         // Update display
         if (customMessage.length() > 0) {
             display.showCustomMessage(customMessage);
@@ -76,11 +78,11 @@ void loop() {
             display.showAirQuality(currentPPM, currentQuality, relayState);
         }
     }
-    
+
     // Send data to Firebase every 30 seconds
     if (currentMillis - lastFirebaseUpdate >= 30000) {
         lastFirebaseUpdate = currentMillis;
-        
+
         String jsonData = firebaseClient.createSensorData(currentPPM, currentQuality, relayState);
         if (firebaseClient.sendSensorData(jsonData)) {
             Serial.println("Data sent to Firebase successfully");
@@ -88,29 +90,29 @@ void loop() {
             Serial.println("Failed to send data to Firebase");
         }
     }
-    
+
     // Check for Firebase commands every 10 seconds
     if (currentMillis - lastCommandCheck >= 10000) {
         lastCommandCheck = currentMillis;
-        
+
         String commands = firebaseClient.getCommands();
         if (commands.length() > 0) {
             processCommands(commands);
         }
     }
-    
+
     delay(100);
 }
 
 void processCommands(String commandsJson) {
     DynamicJsonDocument doc(1024);
     DeserializationError error = deserializeJson(doc, commandsJson);
-    
+
     if (error) {
         Serial.println("Failed to parse commands JSON");
         return;
     }
-    
+
     // Process relay command
     if (doc.containsKey("relay_state")) {
         String newRelayState = doc["relay_state"];
@@ -121,7 +123,7 @@ void processCommands(String commandsJson) {
             Serial.printf("Relay state changed to: %s\n", relayState ? "ON" : "OFF");
         }
     }
-    
+
     // Process sampling interval command
     if (doc.containsKey("sampling_interval")) {
         int newInterval = doc["sampling_interval"];
@@ -130,13 +132,13 @@ void processCommands(String commandsJson) {
             Serial.printf("Sampling interval changed to: %d seconds\n", samplingInterval);
         }
     }
-    
+
     // Process OLED message command
     if (doc.containsKey("oled_message")) {
         String newMessage = doc["oled_message"];
         customMessage = newMessage;
         Serial.printf("OLED message: %s\n", customMessage.c_str());
-        
+
         // Clear custom message after 10 seconds
         if (customMessage == "CLEAR") {
             customMessage = "";

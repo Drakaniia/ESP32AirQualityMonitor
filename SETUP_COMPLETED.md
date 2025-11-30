@@ -1,7 +1,7 @@
 # ESP32 Air Quality Monitor - Setup Completed Guide
 
 This document provides a complete guide to the setup that has been completed for your ESP32 Air Quality Monitor project.
-
+platformio device list
 ## Overview
 
 Your ESP32 Air Quality Monitor project is now fully configured with:
