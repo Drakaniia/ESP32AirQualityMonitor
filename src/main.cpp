@@ -42,9 +42,9 @@ void setup() {
     
     // Connect to WiFi
     if (!wifiManager.connect()) {
-        Serial.println("WiFi connection failed!");
+        Serial.println("WiFi connection failed! Continuing in offline mode...");
         display.showMessage("WiFi Failed");
-        ESP.restart();
+        // ESP.restart(); // Don't restart, allow offline operation
     }
     
     // Initialize Firebase

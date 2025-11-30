@@ -2,8 +2,8 @@
 #define CONFIG_H
 
 // WiFi Configuration
-#define WIFI_SSID "SHEESH"
-#define WIFI_PASSWORD "Kenjigwapo_123"
+#define WIFI_SSID "Hotspot1"
+#define WIFI_PASSWORD "Kenjigwapo12"
 
 // Firebase Configuration
 #define FIREBASE_PROJECT_ID "air-quality-monitor-c0862"

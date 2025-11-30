@@ -12,6 +12,10 @@ WiFiManager::WiFiManager() {
 bool WiFiManager::connect() {
     Serial.println("Connecting to WiFi...");
     
+    WiFi.mode(WIFI_STA); 
+    WiFi.disconnect(true); 
+    delay(100);
+    
     WiFi.begin(ssid, password);
     
     unsigned long startTime = millis();

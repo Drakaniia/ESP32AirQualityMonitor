@@ -18,7 +18,8 @@ bool FirebaseClient::init() {
     }
     
     // Test Firebase connection
-    String testUrl = "https://firestore.googleapis.com/v1/projects/" + String(projectId);
+    // Test Firebase connection
+    String testUrl = "https://firestore.googleapis.com/v1/projects/" + String(projectId) + "/databases/(default)";
     http.begin(testUrl);
     http.addHeader("Content-Type", "application/json");
     

@@ -1,6 +1,6 @@
 // Configuration constants
-#define WIFI_SSID "SHEESH"
-#define WIFI_PASSWORD "Kenjigwapo_123"
+#define WIFI_SSID "AirQualityMonitorNetwork"  
+#define WIFI_PASSWORD "SecurePassword123"  
 #define FIREBASE_PROJECT_ID "air-quality-monitor-c0862"
 #define FIREBASE_API_KEY "AIzaSyAgCNERlOUnJyQsgFFGawHm9gIygUTxwQM"
 #define DEVICE_ID "esp32_01"
