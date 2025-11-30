@@ -1,15 +1,15 @@
 # ESP32 Air Quality Monitor
 
-A comprehensive IoT system for real-time air quality monitoring using ESP32, MQ-135 sensor, and Firebase integration with a responsive web dashboard.
+A comprehensive IoT system for real-time air quality monitoring using ESP32, MQ-135 sensor, MQTT communication, and a responsive web dashboard with Firebase Authentication.
 
 ## Features
 
 ### ESP32 Device
 - **Real-time Sensing**: MQ-135 air quality sensor with PPM readings
 - **Local Display**: 0.96" OLED showing current air quality and relay status
-- **Remote Control**: Firebase-based commands for relay and display control
+- **MQTT Communication**: Reliable MQTT-based data transmission
 - **WiFi Connectivity**: Reliable WiFi connection with automatic reconnection
-- **Data Upload**: Automatic sensor data upload to Firebase Firestore
+- **Remote Control**: MQTT-based commands for relay and display control
 
 ### Web Dashboard
 - **Real-time Monitoring**: Live air quality data and device status
@@ -19,19 +19,28 @@ A comprehensive IoT system for real-time air quality monitoring using ESP32, MQ-
 - **Responsive Design**: Mobile-friendly PWA with install support
 - **Authentication**: Secure Firebase Auth integration
 
+### MQTT Bridge
+- **Real-time Communication**: Bidirectional MQTT message handling
+- **API Integration**: RESTful endpoints for dashboard communication
+- **Command Relay**: Forwards commands between dashboard and ESP32
+- **Error Handling**: Robust error handling and logging
+
 ## System Architecture
 
 ```
 ESP32 (MQ-135 + OLED + Relay)
-       │ WiFi HTTPS (JSON)
+       │ WiFi MQTT
        ▼
-Firebase Backend:
-   • Firestore DB (sensor data)
-   • RTDB (device commands)
-   • Firebase Auth (dashboard login)
+MQTT Broker (broker.hivemq.com)
        │
        ▼
+MQTT Bridge (Node.js)
+       │ HTTP API
+       ▼
 Responsive Web Dashboard (Next.js / React)
+       │
+       ▼
+Firebase Authentication
 ```
 
 ## Hardware Requirements
@@ -70,18 +79,20 @@ Responsive Web Dashboard (Next.js / React)
 - [Node.js](https://nodejs.org/) (v16 or higher)
 - [Git](https://git-scm.com/)
 
-### 2. Firebase Setup
+### 2. Firebase Setup (Authentication Only)
 1. Go to [Firebase Console](https://console.firebase.google.com/)
-2. Create a new project with Blaze (pay-as-you-go) plan
-3. Enable Firestore Database, Realtime Database, and Authentication
+2. Create a new project
+3. Enable Authentication (Email/Password or Google)
 4. Get your Firebase configuration from Project Settings → General → Your apps
-5. Deploy the security rules from `firebase/` directory
 
 ### 3. Project Setup
 ```bash
 # Clone the repository
 git clone https://github.com/your-username/ESP32AirQualityMonitor.git
 cd ESP32AirQualityMonitor
+
+# Install bridge dependencies
+npm install mqtt express
 
 # Install dashboard dependencies
 cd dashboard
@@ -90,12 +101,10 @@ npm install
 
 ### 4. ESP32 Configuration
 1. Open project in VS Code with PlatformIO IDE
-2. Update `src/config.h` with your WiFi and Firebase credentials:
+2. Update `src/config.h` with your WiFi credentials:
 ```cpp
 #define WIFI_SSID "your_wifi_ssid"
 #define WIFI_PASSWORD "your_wifi_password"
-#define FIREBASE_PROJECT_ID "your-firebase-project-id"
-#define FIREBASE_API_KEY "your-firebase-api-key"
 ```
 3. Build and upload firmware: PlatformIO → Upload (or `pio run --target upload`)
 
@@ -109,13 +118,19 @@ NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
 NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
-NEXT_PUBLIC_FIREBASE_DATABASE_URL=https://your-project-default-rtdb.firebaseio.com
 ```
 
 ### 6. Run the System
-1. Upload ESP32 firmware and verify it connects to Firebase
-2. Start dashboard: `cd dashboard && npm run dev`
-3. Visit `http://localhost:3000` to view the dashboard
+```bash
+# Start MQTT bridge (from project root)
+BRIDGE_PORT=3002 node mqtt-bridge.js
+
+# Start dashboard (in new terminal)
+cd dashboard && npm run dev
+
+# Visit dashboard
+http://localhost:3000
+```
 
 ## Project Structure
 
@@ -124,25 +139,24 @@ NEXT_PUBLIC_FIREBASE_DATABASE_URL=https://your-project-default-rtdb.firebaseio.c
 │   ├── main.cpp           # Main application logic
 │   ├── config.h           # Configuration constants
 │   ├── wifi_manager.*     # WiFi connection management
-│   ├── firebase_client.*  # Firebase integration
+│   ├── iot_protocol.*     # MQTT communication
 │   ├── sensor_mq135.*     # MQ-135 sensor handling
 │   ├── oled_display.*     # OLED display management
 │   └── relay_controller.* # Relay control logic
 ├── dashboard/              # Next.js web dashboard
 │   ├── src/
-│   │   ├── app/           # App Router pages
+│   │   ├── app/           # App Router pages and API routes
 │   │   ├── components/    # React components
 │   │   └── lib/           # Firebase configuration
 │   ├── public/            # Static assets
 │   └── package.json       # Dependencies
 ├── firebase/              # Firebase configuration
 │   ├── firestore.rules    # Firestore security rules
-│   ├── database.rules.json # RTDB security rules
 │   └── firebase.json      # Firebase deployment config
+├── mqtt-bridge.js         # MQTT bridge server
+├── package.json           # Bridge dependencies
 ├── platformio.ini         # PlatformIO configuration
-├── DEPLOYMENT.md          # Complete deployment guide
-├── COMPREHENSIVE_SETUP.md # Detailed setup instructions
-└── README.md             # This file
+└── dashboard/docs/SETUP_GUIDE.md # Detailed setup instructions
 ```
 
 ## Configuration
@@ -154,9 +168,9 @@ Edit `src/config.h`:
 #define WIFI_SSID "your_wifi_ssid"
 #define WIFI_PASSWORD "your_wifi_password"
 
-// Firebase Configuration
-#define FIREBASE_PROJECT_ID "your-firebase-project-id"
-#define FIREBASE_API_KEY "your-firebase-api-key"
+// MQTT Configuration
+#define MQTT_BROKER "broker.hivemq.com"
+#define MQTT_PORT 1883
 #define DEVICE_ID "esp32_01"  // Unique identifier for your device
 
 // Hardware Pin Configuration
@@ -175,7 +189,15 @@ NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
 NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
-NEXT_PUBLIC_FIREBASE_DATABASE_URL=https://your-project-default-rtdb.firebaseio.com
+```
+
+### MQTT Bridge (Optional)
+Set environment variables to override defaults:
+```bash
+export MQTT_BROKER=mqtt://broker.hivemq.com
+export MQTT_PORT=1883
+export DASHBOARD_API_URL=http://localhost:3000
+export BRIDGE_PORT=3002
 ```
 
 ## Air Quality Levels
@@ -209,12 +231,24 @@ The system categorizes air quality based on PPM readings:
 - Send custom messages to OLED display
 - Quick action buttons for common commands
 
+## MQTT Topics
+
+### Data Flow
+- **Sensor Data**: `airquality/esp32_01/sensor`
+- **Commands**: `airquality/esp32_01/command`
+- **Status**: `airquality/esp32_01/status`
+
+### Message Format
+Sensor data includes: device_id, ppm, quality, relay_state, timestamp
+Commands include: relay control actions, display messages
+
 ## Security
 
 - Firebase Authentication for dashboard access
-- Firestore and RTDB security rules
+- MQTT broker security considerations for production
 - HTTPS communication with Firebase
 - Input validation and sanitization
+- Environment variables for sensitive configuration
 
 ## Mobile Support
 
@@ -251,24 +285,35 @@ npm run build  # Production build
 npm run start  # Production server
 ```
 
+### MQTT Bridge Development
+```bash
+# Install dependencies
+npm install mqtt express
+
+# Run bridge
+BRIDGE_PORT=3002 node mqtt-bridge.js
+```
+
 ## Data Flow
 
 ### Uploading Data
 1. ESP32 reads sensor data every 5 seconds
-2. ESP32 uploads data to Firebase Firestore every 30 seconds
-3. Data includes: PPM value, air quality level, relay state, timestamp
+2. ESP32 publishes data to MQTT broker
+3. MQTT bridge receives and forwards to dashboard API
+4. Dashboard updates in real-time
 
 ### Receiving Commands
-1. Dashboard sends commands to Firebase Realtime Database
-2. ESP32 checks for commands every 10 seconds
-3. Commands include: relay control, sampling interval, OLED display messages
+1. Dashboard sends commands to bridge API
+2. Bridge publishes commands to MQTT broker
+3. ESP32 receives and processes commands
+4. ESP32 executes actions (relay control, display updates)
 
 ## Monitoring & Maintenance
 
-### Firebase Usage
-- Monitor Firestore read/write operations
-- Check RTDB usage statistics
-- Set up billing alerts for Blaze plan
+### MQTT Broker
+- Monitor message flow and connection status
+- Check bridge console for errors
+- Verify topic subscriptions
 
 ### Device Maintenance
 - Calibrate MQ-135 sensor monthly
@@ -279,15 +324,17 @@ npm run start  # Production server
 ## Troubleshooting
 
 ### Common Issues
-- **No data in dashboard**: Check Firebase configuration, verify ESP32 is uploading
+- **No data in dashboard**: Check MQTT bridge is running, verify ESP32 MQTT connection
 - **Cannot upload firmware**: Check USB connection, COM port, drivers
 - **WiFi connection fails**: Verify credentials in config.h, ensure signal strength
-- **Dashboard shows no data**: Check Firebase security rules, verify authentication
+- **MQTT connection fails**: Check broker URL, internet connectivity
+- **Bridge errors**: Verify dashboard is running on port 3000
 
 ### Debugging
 - Monitor serial output: 115200 baud rate
-- Check Firebase Console for database activity
+- Check MQTT bridge console for messages
 - Verify all environment variables are set correctly
+- Test MQTT broker connectivity
 
 ## Contributing
 
@@ -299,20 +346,19 @@ npm run start  # Production server
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under MIT License - see the LICENSE file for details.
 
 ## Support
 
-For detailed setup instructions, refer to [COMPREHENSIVE_SETUP.md](./COMPREHENSIVE_SETUP.md).
-For deployment options, see [DEPLOYMENT.md](./DEPLOYMENT.md).
+For detailed setup instructions, refer to [dashboard/docs/SETUP_GUIDE.md](./dashboard/docs/SETUP_GUIDE.md).
 
 If you encounter issues:
 1. Check the troubleshooting section above
 2. Review hardware connections
 3. Monitor serial output (115200 baud)
-4. Check Firebase console for errors
-5. Verify dashboard configuration matches Firebase settings
+4. Check MQTT bridge console for errors
+5. Verify dashboard configuration
 
 ---
 
-**Built with ❤️ using ESP32, Firebase, and Next.js"
+**Built with ❤️ using ESP32, MQTT, and Next.js**
