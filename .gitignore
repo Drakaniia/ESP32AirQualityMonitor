@@ -39,6 +39,12 @@ dashboard/npm-debug.log*
 dashboard/yarn-debug.log*
 dashboard/yarn-error.log*
 
+# Node.js (for bridge)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
 # Logs
 logs
 *.log
@@ -69,6 +75,9 @@ __pycache__/
 # Firebase
 firebase-debug.log
 firebase-debug.*.log
+
+# Firebase database files (removed - using MQTT instead)
+database.rules.json
 
 # Environment variables
 .env

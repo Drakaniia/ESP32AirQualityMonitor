@@ -1,18 +1,40 @@
+// Configuration constants
+#define WIFI_SSID "AirQualityMonitorNetwork"  
+#define WIFI_PASSWORD "SecurePassword123"  
+#define FIREBASE_PROJECT_ID "air-quality-monitor-c0862"
+#define FIREBASE_API_KEY "AIzaSyAgCNERlOUnJyQsgFFGawHm9gIygUTxwQM"
+#define DEVICE_ID "esp32_01"
+#define MQ135_PIN 34
+#define RELAY_PIN 26
+#define OLED_SDA 21
+#define OLED_SCL 22
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_ADDRESS 0x3C
+#define MQ135_R0 76.63
+#define SENSOR_READ_INTERVAL 5000
+#define FIREBASE_UPDATE_INTERVAL 30000
+#define COMMAND_CHECK_INTERVAL 10000
+#define DEBUG true
+#define LED_BUILTIN 2
+#define AQ_THRESHOLD_EXCELLENT 50
+#define AQ_THRESHOLD_GOOD 100
+#define AQ_THRESHOLD_MODERATE 200
+#define AQ_THRESHOLD_POOR 400
+#define AQ_THRESHOLD_VERY_POOR 800
+
 // Include all necessary libraries
 #include <Arduino.h>
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <Adafruit_SSD1306.h>
 #include <Wire.h>
 
-// Include our new IoT protocol and other modules
-#include "src/config.h"
-#include "src/iot_protocol.h"
-
 // Forward declarations for classes
 class WiFiManager;
-class IoTProtocol;
+class FirebaseClient;
 class MQ135Sensor;
 class OLEDDisplay;
 class RelayController;
@@ -622,80 +644,65 @@ void OLEDDisplay::update() {
     display.display();
 }
 
-// IoT Protocol class
-class IoTProtocol {
+// Firebase Client class
+class FirebaseClient {
 private:
-    WiFiClient espClient;
-    PubSubClient mqttClient;
-    WebSocketsClient webSocket;
-    HTTPClient httpClient;
-
-    String serverAddress;
-    int protocolType;
-    bool isConnected;
+    HTTPClient http;
+    String projectId;
+    String apiKey;
     String deviceId;
+    String firestoreUrl;
+    String realtimeDbUrl;
+    bool isInitialized;
 
     String getCurrentTimestamp();
-
-    // MQTT callbacks
-    static void mqttCallback(char* topic, byte* payload, unsigned int length);
-
-    // WebSocket callbacks
-    void webSocketEvent(WStype_t type, uint8_t * payload, size_t length);
+    bool sendHttpRequest(String url, String method, String payload = "");
+    String getHttpRequest(String url);
 
 public:
-    IoTProtocol();
-    bool init(int protocol, String server = "", String deviceId = "esp32_01");
-    bool connect();
-    bool sendSensorData(float ppm, String quality, bool relayState);
+    FirebaseClient();
+    bool init();
+    bool sendSensorData(String jsonData);
     String getCommands();
     String createSensorData(float ppm, String quality, bool relayState);
+    void setDeviceId(String id);
     bool updateDeviceStatus(bool online);
-    bool isConnectedToServer();
-    void loop();  // Call this in your main loop for MQTT and WebSocket
 };
 
-IoTProtocol::IoTProtocol() : mqttClient(espClient) {
-    protocolType = COMM_PROTOCOL;
-    isConnected = false;
-    deviceId = "esp32_01";
+FirebaseClient::FirebaseClient() {
+    projectId = FIREBASE_PROJECT_ID;
+    apiKey = FIREBASE_API_KEY;
+    deviceId = DEVICE_ID;
+    firestoreUrl = "https://firestore.googleapis.com/v1/projects/" + String(projectId) + "/databases/(default)/documents/readings";
+    realtimeDbUrl = "https://" + String(projectId) + "-default-rtdb.firebaseio.com/commands/" + deviceId + ".json";
+    isInitialized = false;
 }
 
-bool IoTProtocol::init(int protocol, String server, String devId) {
-    protocolType = protocol;
-    serverAddress = server;
-    deviceId = devId;
-
-    switch(protocolType) {
-        case COMM_PROTOCOL_MQTT:
-            // Configure MQTT client
-            mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
-            mqttClient.setCallback(mqttCallback);
-            Serial.println("MQTT Protocol initialized");
-            break;
-
-        case COMM_PROTOCOL_WEBSOCKET:
-            // Configure WebSocket client
-            webSocket.begin(serverAddress, WS_PORT, "/");
-            webSocket.onEvent([this](WStype_t type, uint8_t * payload, size_t length) {
-                this->webSocketEvent(type, payload, length);
-            });
-            Serial.println("WebSocket Protocol initialized");
-            break;
-
-        case COMM_PROTOCOL_HTTP:
-            Serial.println("HTTP Protocol initialized");
-            break;
-
-        default:
-            Serial.println("Unknown protocol selected");
-            return false;
+bool FirebaseClient::init() {
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("WiFi not connected for Firebase initialization");
+        return false;
     }
 
-    return true;
+    // Test Firebase connection
+    String testUrl = "https://firestore.googleapis.com/v1/projects/" + String(projectId);
+    http.begin(testUrl);
+    http.addHeader("Content-Type", "application/json");
+
+    int httpCode = http.GET();
+    http.end();
+
+    if (httpCode == HTTP_CODE_OK) {
+        isInitialized = true;
+        Serial.println("Firebase initialized successfully");
+        return true;
+    } else {
+        Serial.printf("Firebase initialization failed with HTTP code: %d\n", httpCode);
+        return false;
+    }
 }
 
-String IoTProtocol::getCurrentTimestamp() {
+String FirebaseClient::getCurrentTimestamp() {
     // Get current time from NTP server
     configTime(0, 0, "pool.ntp.org", "time.nist.gov");
 
@@ -710,152 +717,143 @@ String IoTProtocol::getCurrentTimestamp() {
     return String(buffer);
 }
 
-bool IoTProtocol::sendSensorData(float ppm, String quality, bool relayState) {
-    // Create JSON payload
-    DynamicJsonDocument doc(512);
-    doc["device_id"] = deviceId;
-    doc["ppm"] = ppm;
-    doc["quality"] = quality;
-    doc["relay_state"] = relayState ? "ON" : "OFF";
-    doc["timestamp"] = getCurrentTimestamp();
-
-    String jsonString;
-    serializeJson(doc, jsonString);
-
-    switch(protocolType) {
-        case COMM_PROTOCOL_MQTT:
-            if (mqttClient.connected()) {
-                bool success = mqttClient.publish(MQTT_DEVICE_TOPIC, jsonString.c_str());
-                Serial.printf("MQTT Publish result: %s\n", success ? "Success" : "Failed");
-                return success;
-            }
-            break;
-
-        case COMM_PROTOCOL_WEBSOCKET:
-            if (isConnected) {
-                bool success = webSocket.sendTXT(jsonString);
-                Serial.printf("WebSocket Send result: %s\n", success ? "Success" : "Failed");
-                return success;
-            }
-            break;
-
-        case COMM_PROTOCOL_HTTP:
-            {
-                httpClient.begin(espClient, "http://your-http-endpoint.com/api/sensor-data");
-                httpClient.addHeader("Content-Type", "application/json");
-
-                int httpResponseCode = httpClient.POST(jsonString);
-                String response = httpClient.getString();
-
-                Serial.printf("HTTP POST response code: %d, Response: %s\n", httpResponseCode, response.c_str());
-
-                httpClient.end();
-
-                return (httpResponseCode > 0 && httpResponseCode < 300);
-            }
-            break;
+bool FirebaseClient::sendSensorData(String jsonData) {
+    if (!isInitialized) {
+        Serial.println("Firebase not initialized");
+        return false;
     }
 
-    return false;
+    String url = firestoreUrl + "?key=" + apiKey;
+    return sendHttpRequest(url, "POST", jsonData);
 }
 
-String IoTProtocol::getCommands() {
-    String command = "";
-
-    switch(protocolType) {
-        case COMM_PROTOCOL_MQTT:
-            if (mqttClient.connected()) {
-                mqttClient.loop();  // Process MQTT messages
-                // Command handling is done in callback
-            }
-            break;
-
-        case COMM_PROTOCOL_WEBSOCKET:
-            webSocket.loop();
-            // Command handling is done in webSocketEvent
-            break;
-
-        case COMM_PROTOCOL_HTTP:
-            {
-                // HTTP is not ideal for receiving commands in real-time
-                // Would need to poll for commands
-                httpClient.begin(espClient, "http://your-http-endpoint.com/api/device-commands/" + deviceId);
-                int httpResponseCode = httpClient.GET();
-
-                if (httpResponseCode > 0) {
-                    command = httpClient.getString();
-                }
-
-                httpClient.end();
-            }
-            break;
+String FirebaseClient::getCommands() {
+    if (!isInitialized) {
+        return "";
     }
 
-    return command;
+    return getHttpRequest(realtimeDbUrl);
 }
 
-String IoTProtocol::createSensorData(float ppm, String quality, bool relayState) {
-    DynamicJsonDocument doc(512);
-    doc["device_id"] = deviceId;
-    doc["ppm"] = ppm;
-    doc["quality"] = quality;
-    doc["relay_state"] = relayState ? "ON" : "OFF";
-    doc["timestamp"] = getCurrentTimestamp();
+String FirebaseClient::createSensorData(float ppm, String quality, bool relayState) {
+    DynamicJsonDocument doc(1024);
+
+    // Create the document structure for Firestore
+    JsonObject fields = doc.createNestedObject("fields");
+
+    // Device ID
+    JsonObject deviceValue = fields.createNestedObject("device_id");
+    deviceValue["stringValue"] = deviceId;
+
+    // PPM value
+    JsonObject ppmValue = fields.createNestedObject("ppm");
+    ppmValue["doubleValue"] = ppm;
+
+    // Quality
+    JsonObject qualityValue = fields.createNestedObject("quality");
+    qualityValue["stringValue"] = quality;
+
+    // Relay state
+    JsonObject relayValue = fields.createNestedObject("relay_state");
+    relayValue["stringValue"] = relayState ? "ON" : "OFF";
+
+    // Timestamp
+    JsonObject timestampValue = fields.createNestedObject("timestamp");
+    timestampValue["timestampValue"] = getCurrentTimestamp();
 
     String output;
     serializeJson(doc, output);
     return output;
 }
 
-
-bool IoTProtocol::updateDeviceStatus(bool online) {
-    DynamicJsonDocument doc(256);
-    doc["device_id"] = deviceId;
-    doc["status"] = online ? "online" : "offline";
-    doc["timestamp"] = getCurrentTimestamp();
-
-    String jsonString;
-    serializeJson(doc, jsonString);
-
-    switch(protocolType) {
-        case COMM_PROTOCOL_MQTT:
-            if (mqttClient.connected()) {
-                return mqttClient.publish(MQTT_STATUS_TOPIC, jsonString.c_str());
-            }
-            break;
-
-        case COMM_PROTOCOL_WEBSOCKET:
-            if (isConnected) {
-                return webSocket.sendTXT("status:" + jsonString);
-            }
-            break;
-
-        case COMM_PROTOCOL_HTTP:
-            {
-                httpClient.begin(espClient, "http://your-http-endpoint.com/api/device-status");
-                httpClient.addHeader("Content-Type", "application/json");
-
-                int httpResponseCode = httpClient.PUT(jsonString);
-                httpClient.end();
-
-                return (httpResponseCode > 0 && httpResponseCode < 300);
-            }
-            break;
+bool FirebaseClient::sendHttpRequest(String url, String method, String payload) {
+    HTTPClient http;
+    WiFiClientSecure *client = new WiFiClientSecure;
+    if(client == NULL){
+        Serial.println("Unable to create WiFiClientSecure");
+        return false;
     }
 
-    return false;
+    client->setInsecure(); // Skip certificate verification for simplicity
+    http.begin(*client, url);
+    http.addHeader("Content-Type", "application/json");
+
+    int httpCode = 0;
+    if (method == "POST") {
+        httpCode = http.POST(payload);
+    } else if (method == "PUT") {
+        httpCode = http.PUT(payload);
+    } else if (method == "GET") {
+        httpCode = http.GET();
+    }
+
+    String response = http.getString();
+
+    if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_CREATED) {
+        Serial.printf("HTTP %s successful: %s\n", method.c_str(), response.c_str());
+        http.end();
+        delete client;
+        return true;
+    } else {
+        Serial.printf("HTTP %s failed with code %d: %s\n", method.c_str(), httpCode, response.c_str());
+        http.end();
+        delete client;
+        return false;
+    }
+}
+
+String FirebaseClient::getHttpRequest(String url) {
+    HTTPClient http;
+    WiFiClientSecure *client = new WiFiClientSecure;
+    if(client == NULL){
+        Serial.println("Unable to create WiFiClientSecure");
+        return "";
+    }
+
+    client->setInsecure(); // Skip certificate verification for simplicity
+    http.begin(*client, url);
+    http.addHeader("Content-Type", "application/json");
+
+    int httpCode = http.GET();
+    String response = http.getString();
+
+    http.end();
+    delete client;
+
+    if (httpCode == HTTP_CODE_OK) {
+        return response;
+    } else {
+        Serial.printf("HTTP GET failed with code %d: %s\n", httpCode, response.c_str());
+        return "";
+    }
+}
+
+void FirebaseClient::setDeviceId(String id) {
+    deviceId = id;
+    realtimeDbUrl = "https://" + String(projectId) + "-default-rtdb.firebaseio.com/commands/" + deviceId + ".json";
+}
+
+bool FirebaseClient::updateDeviceStatus(bool online) {
+    if (!isInitialized) {
+        return false;
+    }
+
+    String statusUrl = "https://" + String(projectId) + "-default-rtdb.firebaseio.com/devices/" + deviceId + "/status.json";
+    String payload = online ? "\"online\"" : "\"offline\"";
+
+    return sendHttpRequest(statusUrl, "PUT", payload);
 }
 
 // Global objects
 WiFiManager wifiManager;
-IoTProtocol iotProtocol;
+FirebaseClient firebaseClient;
 MQ135Sensor sensor;
 OLEDDisplay display;
 RelayController relay;
 
 // Global variables
 unsigned long lastSensorRead = 0;
-unsigned long lastMQTTUpdate = 0;
+unsigned long lastFirebaseUpdate = 0;
 unsigned long lastCommandCheck = 0;
 float currentPPM = 0;
 String currentQuality = "";
@@ -882,19 +880,10 @@ void setup() {
         ESP.restart();
     }
 
-    // Initialize IoT Protocol (using MQTT for dashboard communication)
-    if (!iotProtocol.init(COMM_PROTOCOL_MQTT, MQTT_SERVER)) {
-        Serial.println("IoT Protocol initialization failed!");
-        display.showMessage("IoT Protocol Error");
-    } else {
-        // Attempt to connect to the MQTT broker
-        if (iotProtocol.connect()) {
-            Serial.println("MQTT connected successfully");
-            // Update device status to online
-            iotProtocol.updateDeviceStatus(true);
-        } else {
-            Serial.println("MQTT connection failed");
-        }
+    // Initialize Firebase
+    if (!firebaseClient.init()) {
+        Serial.println("Firebase initialization failed!");
+        display.showMessage("Firebase Error");
     }
 
     display.showMessage("System Ready");
@@ -921,131 +910,29 @@ void loop() {
         }
     }
 
-    // Send sensor data to MQTT broker every 30 seconds
-    if (currentMillis - lastMQTTUpdate >= MQTT_UPDATE_INTERVAL) {
-        lastMQTTUpdate = currentMillis;
+    // Send data to Firebase every 30 seconds
+    if (currentMillis - lastFirebaseUpdate >= 30000) {
+        lastFirebaseUpdate = currentMillis;
 
-        if (iotProtocol.publishSensorData(currentPPM, currentQuality, relayState)) {
-            Serial.println("Data sent to MQTT broker successfully");
+        String jsonData = firebaseClient.createSensorData(currentPPM, currentQuality, relayState);
+        if (firebaseClient.sendSensorData(jsonData)) {
+            Serial.println("Data sent to Firebase successfully");
         } else {
-            Serial.println("Failed to send data to MQTT broker");
+            Serial.println("Failed to send data to Firebase");
         }
     }
 
-    // Check for commands from MQTT every 5 seconds
-    if (currentMillis - lastCommandCheck >= 5000) {
+    // Check for Firebase commands every 10 seconds
+    if (currentMillis - lastCommandCheck >= 10000) {
         lastCommandCheck = currentMillis;
 
-        // For MQTT, commands are handled in the callback, so we just need to make sure loop is running
+        String commands = firebaseClient.getCommands();
+        if (commands.length() > 0) {
+            processCommands(commands);
+        }
     }
-
-    // Call loop for IoT protocol (needed for MQTT command handling)
-    iotProtocol.loop();
 
     delay(100);
-}
-
-// MQTT callback function
-void IoTProtocol::mqttCallback(char* topic, byte* payload, unsigned int length) {
-    // This would handle incoming MQTT messages
-    String message = "";
-    for (unsigned int i = 0; i < length; i++) {
-        message += (char)payload[i];
-    }
-    Serial.printf("MQTT Message received on topic %s: %s\n", topic, message.c_str());
-
-    // Process the command
-    processCommands(message);
-}
-
-// WebSocket event handler function
-void IoTProtocol::webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
-    switch(type) {
-        case WStype_DISCONNECTED:
-            Serial.printf("[WSc] Disconnected!\n");
-            isConnected = false;
-            break;
-        case WStype_CONNECTED:
-            Serial.printf("[WSc] Connected to url: %s\n", payload);
-            isConnected = true;
-            break;
-        case WStype_TEXT:
-            Serial.printf("[WSc] Received text: %s\n", payload);
-            // Process the command
-            processCommands((char*)payload);
-            break;
-        case WStype_BIN:
-            Serial.printf("[WSc] Got binary length: %u\n", length);
-            break;
-    }
-}
-
-bool IoTProtocol::connect() {
-    switch(protocolType) {
-        case COMM_PROTOCOL_MQTT:
-            if (!mqttClient.connected()) {
-                String clientId = "ESP32Client-" + String(random(0xffff), HEX);
-
-                if (mqttClient.connect(clientId.c_str())) {
-                    Serial.println("MQTT Connected");
-                    // Subscribe to command topic
-                    mqttClient.subscribe(MQTT_COMMAND_TOPIC);
-                    isConnected = true;
-                    return true;
-                } else {
-                    Serial.printf("MQTT connection failed, state: %d\n", mqttClient.state());
-                    isConnected = false;
-                    return false;
-                }
-            }
-            return true;
-
-        case COMM_PROTOCOL_WEBSOCKET:
-            if (!isConnected) {
-                webSocket.begin(serverAddress, WS_PORT, "/");
-            }
-            return isConnected;
-
-        case COMM_PROTOCOL_HTTP:
-            // HTTP doesn't maintain a connection, so always "connected"
-            isConnected = true;
-            return true;
-
-        default:
-            return false;
-    }
-}
-
-bool IoTProtocol::isConnectedToServer() {
-    switch(protocolType) {
-        case COMM_PROTOCOL_MQTT:
-            return mqttClient.connected();
-        case COMM_PROTOCOL_WEBSOCKET:
-            return isConnected;
-        case COMM_PROTOCOL_HTTP:
-            // For HTTP, check WiFi connection
-            return WiFi.status() == WL_CONNECTED;
-        default:
-            return false;
-    }
-}
-
-void IoTProtocol::loop() {
-    // Call this in your main loop for proper operation
-    switch(protocolType) {
-        case COMM_PROTOCOL_MQTT:
-            if (mqttClient.connected()) {
-                mqttClient.loop();
-            } else {
-                // Try to reconnect
-                connect();
-            }
-            break;
-
-        case COMM_PROTOCOL_WEBSOCKET:
-            webSocket.loop();
-            break;
-    }
 }
 
 void processCommands(String commandsJson) {

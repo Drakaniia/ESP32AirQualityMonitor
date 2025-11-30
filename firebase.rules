@@ -1,0 +1,22 @@
+{
+  "rules": {
+    ".read": "auth != null",
+    ".write": "auth != null",
+    "commands": {
+      "esp32_01": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    "devices": {
+      "esp32_01": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    "readings": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    }
+  }
+}

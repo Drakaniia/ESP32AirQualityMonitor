@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/components/AuthProvider'
 import { useRouter } from 'next/navigation'
-import { SimulationProvider, useSensorData, useAlertData } from '@/simulation/SimulationProvider'
+import { SimulationProvider, useSensorData, useAlertData, useSimulationContext } from '@/simulation/SimulationProvider'
 import AirQualityCard from '@/components/AirQualityCard'
 import DeviceStatusCard from '@/components/DeviceStatusCard'
 import ControlPanel from '@/components/ControlPanel'
@@ -12,9 +12,6 @@ import SafetyStatus from '@/components/SafetyStatus'
 import AlertHistory from '@/components/AlertHistory'
 import SimulationBanner from '@/components/SimulationBanner'
 import GlassCard from '@/components/GlassCard'
-import { db, rtdb, auth } from '@/lib/firebase'
-import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore'
-import { ref, onValue } from 'firebase/database'
 
 interface SensorReading {
   device_id: string
@@ -56,6 +53,9 @@ function DashboardContent() {
     deviceCommands
   })
 
+  // Get simulation context to enable auto-simulation if needed
+  const { startSimulation, isSimulationMode } = useSimulationContext()
+
   useEffect(() => {
     if (!user && !loading) {
       router.push('/login')
@@ -63,91 +63,81 @@ function DashboardContent() {
   }, [user, router, loading])
 
   useEffect(() => {
-    if (!user || !auth || !db || !rtdb) return
+    if (!user) return
 
     // Check if user session is still valid
     const checkAuthStatus = () => {
-      if (auth.currentUser && !auth.currentUser.emailVerified) {
-        setAuthError('Email not verified - please verify your email to continue')
-      }
+      // No auth object anymore in our updated AuthProvider
+      // We just check if user is null
     }
 
     checkAuthStatus()
-  }, [user, auth, db, rtdb])
+  }, [user])
+
+  // Function to fetch sensor data from our API
+  const fetchSensorData = async () => {
+    try {
+      const response = await fetch('/api/sensor-data')
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      const data = await response.json()
+
+      setHistoricalData(data.historicalData || [])
+      setCurrentReading(data.currentReading)
+      setDeviceOnline(data.deviceOnline)
+    } catch (error) {
+      console.error('Error fetching sensor data:', error)
+      setError(`Failed to fetch sensor data: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
+  // Function to fetch device commands from our MQTT bridge
+  const fetchDeviceCommands = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/device-commands/esp32_01')
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      const data = await response.json()
+      setDeviceCommands(data)
+    } catch (error) {
+      console.error('Error fetching device commands:', error)
+      setError(`Failed to fetch device commands: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
+  // Auto-start simulation if no data appears after a timeout
+  useEffect(() => {
+    if (!user || isSimulationMode) return; // Don't auto-start if user not logged in or simulation already running
+
+    const timeoutId = setTimeout(() => {
+      // If no current reading exists after 5 seconds, start simulation
+      if (!currentReading) {
+        console.log("No sensor data received, starting simulation...");
+        startSimulation();
+      }
+    }, 5000); // Wait 5 seconds before starting simulation
+
+    return () => clearTimeout(timeoutId);
+  }, [user, currentReading, isSimulationMode, startSimulation])
 
   useEffect(() => {
-    if (!user || !db || !rtdb) return
+    if (!user) return
 
-    // Listen for latest sensor readings
-    const readingsQuery = query(
-      collection(db, 'readings'),
-      orderBy('timestamp', 'desc'),
-      limit(100) // Increased limit for better history
-    )
+    // Initial fetch
+    fetchSensorData()
+    fetchDeviceCommands()
 
-    const unsubscribeReadings = onSnapshot(
-      readingsQuery,
-      (snapshot) => {
-        const readings: SensorReading[] = []
-        snapshot.forEach((doc) => {
-          const data = doc.data()
-          readings.push({
-            device_id: data.device_id,
-            ppm: data.ppm,
-            quality: data.quality,
-            relay_state: data.relay_state,
-            timestamp: data.timestamp,
-          })
-        })
-        setHistoricalData(readings.reverse())
-        if (readings.length > 0) {
-          setCurrentReading(readings[readings.length - 1])
-        }
-      },
-      (error) => {
-        console.error('Error fetching sensor readings:', error)
-        setError(`Failed to fetch sensor data: ${error.message}`)
-      }
-    )
-
-    // Listen for device commands
-    const commandsRef = ref(rtdb, 'commands/esp32_01')
-    const unsubscribeCommands = onValue(
-      commandsRef,
-      (snapshot) => {
-        const data = snapshot.val()
-        if (data) {
-          setDeviceCommands(data)
-        }
-      },
-      (error) => {
-        console.error('Error fetching device commands:', error)
-        setError(`Failed to fetch device commands: ${error.message}`)
-      }
-    )
-
-    // Listen for device status
-    const statusRef = ref(rtdb, 'devices/esp32_01')
-    const unsubscribeStatus = onValue(
-      statusRef,
-      (snapshot) => {
-        const data = snapshot.val()
-        if (data) {
-          setDeviceOnline(data.status === 'online')
-        }
-      },
-      (error) => {
-        console.error('Error fetching device status:', error)
-        setError(`Failed to fetch device status: ${error.message}`)
-      }
-    )
+    // Set up polling for real-time updates
+    const sensorDataInterval = setInterval(fetchSensorData, 5000) // Update every 5 seconds
+    const commandInterval = setInterval(fetchDeviceCommands, 10000) // Update every 10 seconds
 
     return () => {
-      unsubscribeReadings()
-      unsubscribeCommands()
-      unsubscribeStatus()
+      clearInterval(sensorDataInterval)
+      clearInterval(commandInterval)
     }
-  }, [user, db, rtdb])
+  }, [user])
 
   if (loading) {
     return (
@@ -315,7 +305,22 @@ function DashboardContent() {
                   onCommandUpdate={async (commands) => {
                     try {
                       console.log('Updating commands:', commands)
-                      // Add actual command update logic here if needed
+                      // Send command to MQTT bridge
+                      const response = await fetch('http://localhost:3001/api/send-command/esp32_01', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                          ...commands,
+                          device_id: 'esp32_01',
+                          last_update: Date.now()
+                        })
+                      });
+
+                      if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                      }
                     } catch (err) {
                       setError('Failed to update device commands: ' + (err instanceof Error ? err.message : 'Unknown error'))
                     }

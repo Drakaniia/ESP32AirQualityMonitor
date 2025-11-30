@@ -5,9 +5,6 @@
 #define WIFI_SSID "Hotspot1"
 #define WIFI_PASSWORD "Kenjigwapo12"
 
-// Firebase Configuration
-#define FIREBASE_PROJECT_ID "air-quality-monitor-c0862"
-#define FIREBASE_API_KEY "AIzaSyAgCNERlOUnJyQsgFFGawHm9gIygUTxwQM"
 #define DEVICE_ID "esp32_01"
 
 // Hardware Pin Configuration
@@ -26,7 +23,7 @@
 
 // Timing Configuration
 #define SENSOR_READ_INTERVAL 5000     // Sensor reading interval (ms)
-#define FIREBASE_UPDATE_INTERVAL 30000 // Firebase update interval (ms)
+#define MQTT_UPDATE_INTERVAL 30000    // MQTT update interval (ms)
 #define COMMAND_CHECK_INTERVAL 10000   // Command check interval (ms)
 
 // System Configuration

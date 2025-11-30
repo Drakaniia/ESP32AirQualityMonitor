@@ -1,0 +1,22 @@
+{
+  "name": "air-quality-mqtt-bridge",
+  "version": "1.0.0",
+  "description": "MQTT to HTTP bridge for air quality monitor dashboard",
+  "main": "mqtt-bridge.js",
+  "scripts": {
+    "start": "node mqtt-bridge.js",
+    "dev": "node --watch mqtt-bridge.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "mqtt": "^5.3.0"
+  },
+  "keywords": [
+    "mqtt",
+    "iot",
+    "air-quality",
+    "dashboard"
+  ],
+  "author": "Air Quality Monitor",
+  "license": "MIT"
+}

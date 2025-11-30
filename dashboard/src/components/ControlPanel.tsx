@@ -22,34 +22,97 @@ export default function ControlPanel({ currentCommands, onCommandUpdate }: Contr
   const [samplingInterval, setSamplingInterval] = useState(currentCommands?.sampling_interval || 5)
   const [oledMessage, setOledMessage] = useState(currentCommands?.oled_message || '')
 
-  const handleRelayToggle = () => {
+  const handleRelayToggle = async () => {
     const newState = relayState === 'ON' ? 'OFF' : 'ON'
     setRelayState(newState)
-    
+
     if (isSimulationMode) {
       updateSimulationCommand({ relay_state: newState, last_update: Date.now() })
     } else {
-      onCommandUpdate({ relay_state: newState, last_update: Date.now() })
+      try {
+        const response = await fetch('http://localhost:3001/api/send-command/esp32_01', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            relay_state: newState,
+            sampling_interval: samplingInterval,
+            oled_message: oledMessage,
+            last_update: Date.now()
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        onCommandUpdate({ relay_state: newState, last_update: Date.now() });
+      } catch (error) {
+        console.error('Error sending relay command:', error);
+      }
     }
   }
 
-  const handleSamplingIntervalChange = (newInterval: number) => {
+  const handleSamplingIntervalChange = async (newInterval: number) => {
     setSamplingInterval(newInterval)
-    
+
     if (isSimulationMode) {
       updateSimulationCommand({ sampling_interval: newInterval, last_update: Date.now() })
     } else {
-      onCommandUpdate({ sampling_interval: newInterval, last_update: Date.now() })
+      try {
+        const response = await fetch('http://localhost:3001/api/send-command/esp32_01', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            relay_state: relayState,
+            sampling_interval: newInterval,
+            oled_message: oledMessage,
+            last_update: Date.now()
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        onCommandUpdate({ sampling_interval: newInterval, last_update: Date.now() });
+      } catch (error) {
+        console.error('Error sending sampling interval command:', error);
+      }
     }
   }
 
-  const handleOledMessageSend = () => {
+  const handleOledMessageSend = async () => {
     if (isSimulationMode) {
       updateSimulationCommand({ oled_message: oledMessage, last_update: Date.now() })
     } else {
-      onCommandUpdate({ oled_message: oledMessage, last_update: Date.now() })
+      try {
+        const response = await fetch('http://localhost:3001/api/send-command/esp32_01', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            relay_state: relayState,
+            sampling_interval: samplingInterval,
+            oled_message: oledMessage,
+            last_update: Date.now()
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        onCommandUpdate({ oled_message: oledMessage, last_update: Date.now() });
+      } catch (error) {
+        console.error('Error sending OLED message command:', error);
+      }
     }
-    
+
     if (oledMessage === 'CLEAR') {
       setOledMessage('')
     }
@@ -188,9 +251,30 @@ export default function ControlPanel({ currentCommands, onCommandUpdate }: Contr
                 Send Message
               </button>
               <button
-                onClick={() => {
+                onClick={async () => {
                   setOledMessage('CLEAR')
-                  onCommandUpdate({ oled_message: 'CLEAR', last_update: Date.now() })
+                  try {
+                    const response = await fetch('http://localhost:3001/api/send-command/esp32_01', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({
+                        relay_state: relayState,
+                        sampling_interval: samplingInterval,
+                        oled_message: 'CLEAR',
+                        last_update: Date.now()
+                      })
+                    });
+
+                    if (!response.ok) {
+                      throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    onCommandUpdate({ oled_message: 'CLEAR', last_update: Date.now() });
+                  } catch (error) {
+                    console.error('Error sending clear command:', error);
+                  }
                 }}
                 className="px-3 py-2 bg-white/30 backdrop-blur-sm text-white text-sm font-medium rounded-md hover:bg-white/40 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 border border-white/30"
               >
@@ -208,18 +292,60 @@ export default function ControlPanel({ currentCommands, onCommandUpdate }: Contr
           <h4 className="text-sm font-medium text-white mb-3">Quick Actions</h4>
           <div className="grid grid-cols-2 gap-2">
             <button
-              onClick={() => {
+              onClick={async () => {
                 setOledMessage('Air Quality OK')
-                onCommandUpdate({ oled_message: 'Air Quality OK', last_update: Date.now() })
+                try {
+                  const response = await fetch('http://localhost:3001/api/send-command/esp32_01', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      relay_state: relayState,
+                      sampling_interval: samplingInterval,
+                      oled_message: 'Air Quality OK',
+                      last_update: Date.now()
+                    })
+                  });
+
+                  if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                  }
+
+                  onCommandUpdate({ oled_message: 'Air Quality OK', last_update: Date.now() });
+                } catch (error) {
+                  console.error('Error sending status OK command:', error);
+                }
               }}
               className="px-3 py-2 bg-white/20 backdrop-blur-sm text-white text-xs font-medium rounded hover:bg-white/30 border border-white/30"
             >
               Status OK
             </button>
             <button
-              onClick={() => {
+              onClick={async () => {
                 setOledMessage('Warning!')
-                onCommandUpdate({ oled_message: 'Warning!', last_update: Date.now() })
+                try {
+                  const response = await fetch('http://localhost:3001/api/send-command/esp32_01', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      relay_state: relayState,
+                      sampling_interval: samplingInterval,
+                      oled_message: 'Warning!',
+                      last_update: Date.now()
+                    })
+                  });
+
+                  if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                  }
+
+                  onCommandUpdate({ oled_message: 'Warning!', last_update: Date.now() });
+                } catch (error) {
+                  console.error('Error sending warning command:', error);
+                }
               }}
               className="px-3 py-2 bg-white/20 backdrop-blur-sm text-white text-xs font-medium rounded hover:bg-white/30 border border-white/30"
             >
