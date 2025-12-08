@@ -34,7 +34,7 @@
 #define DHT_READING_DELAY 2000 // Delay between readings (ms) - DHT11 needs 2+ seconds
 
 // Timing Configuration
-#define SENSOR_READ_INTERVAL 5000     // Sensor reading interval (ms)
+#define SENSOR_READ_INTERVAL 2000     // Sensor reading interval (ms) - reduced for faster response
 #define MQTT_UPDATE_INTERVAL 30000    // MQTT update interval (ms)
 #define COMMAND_CHECK_INTERVAL 2000    // Command check interval (ms) - reduced for faster response
 

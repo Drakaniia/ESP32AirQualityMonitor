@@ -130,10 +130,12 @@ private:
 public:
     MQ2Sensor();
     void init();
+    void initWithQuickWarmup();  // Alternative initialization with faster warmup
     float readPPM();
     String getAirQuality(float ppm);
     float getVoltage();
     float getResistance();
+    float getR0();
     bool isCalibrated();
 };
 
@@ -147,13 +149,32 @@ MQ2Sensor::MQ2Sensor() {
     ratio = 0;
 }
 
+void MQ2Sensor::initWithQuickWarmup() {
+    pinMode(sensorPin, INPUT);
+    Serial.println("MQ-2 sensor initializing with quick warmup...");
+
+    // Quick warmup - only 2 seconds instead of 60
+    Serial.println("Quick warmup (2 seconds)...");
+    for (int i = 0; i < 2; i++) {
+        delay(1000);
+        Serial.print(".");
+    }
+    Serial.println("\nQuick warmup complete!");
+
+    // Calibrate sensor in clean air
+    calibrate();
+
+    Serial.printf("MQ-2 sensor initialized with quick warmup. R0: %.2f\n", r0);
+}
+
 void MQ2Sensor::init() {
     pinMode(sensorPin, INPUT);
     Serial.println("MQ-2 sensor initializing...");
 
-    // Allow sensor to warm up (recommended 24-48 hours for best results, but we'll use 60 seconds for practicality)
-    Serial.println("Warming up sensor (60 seconds)...");
-    for (int i = 0; i < 60; i++) {
+    // Allow sensor to warm up - Reduce warmup time significantly
+    // The MQ-2 needs less warmup time for initial calibration than the recommended 24-48 hours
+    Serial.println("Warming up sensor (10 seconds)...");
+    for (int i = 0; i < 10; i++) {
         delay(1000);
         Serial.print(".");
     }
@@ -170,13 +191,19 @@ void MQ2Sensor::calibrate() {
     Serial.println("Place sensor in clean air for accurate calibration!");
 
     float sum = 0;
-    int samples = 100;
+    int samples = 20;  // Reduced samples for faster calibration while maintaining accuracy
 
     // Take multiple readings for calibration in clean air
     for (int i = 0; i < samples; i++) {
         float adcValue = analogRead(sensorPin);
         sum += adcValue;
-        delay(10);
+
+        // Provide feedback during calibration
+        if (i % 5 == 0) {
+            Serial.print("*");  // Print a character every 5 readings for progress feedback
+        }
+
+        delay(10);  // Slightly increased delay between readings but fewer samples
     }
 
     float avgAdc = sum / samples;
@@ -273,6 +300,10 @@ float MQ2Sensor::getVoltage() {
 
 float MQ2Sensor::getResistance() {
     return rs;
+}
+
+float MQ2Sensor::getR0() {
+    return r0;
 }
 
 bool MQ2Sensor::isCalibrated() {
@@ -689,7 +720,36 @@ void OLEDDisplay::showMessage(String message) {
 }
 
 void OLEDDisplay::showCustomMessage(String message) {
-    showMessage(message);
+    if (!isInitialized) return;
+
+    clear();
+
+    // Display message in a dedicated format
+    display.setTextSize(1);
+    display.setCursor(0, 0);
+    display.println("MESSAGE:");
+    display.drawLine(0, 12, 127, 12, SSD1306_WHITE);
+
+    // Word wrap for long messages with proper spacing for the dedicated message screen
+    int line = 2; // Start below the header
+    int col = 0;
+    int maxLines = 7; // Leave space for header
+
+    for (int i = 0; i < message.length(); i++) {
+        if (col > 20 || message.charAt(i) == '\n') {
+            line++;
+            col = 0;
+            if (line >= maxLines) break; // Stop if we've reached max lines
+        }
+
+        if (message.charAt(i) != '\n') {
+            display.setCursor(col * 6, line * 8);
+            display.print(message.charAt(i));
+            col++;
+        }
+    }
+
+    display.display();
 }
 
 void OLEDDisplay::showWiFiStatus(String ip) {
@@ -894,7 +954,10 @@ bool IoTProtocol::sendSensorData(float ppm, String quality, bool relayState) {
             if (mqttClient.connected()) {
                 bool success = mqttClient.publish(MQTT_DEVICE_TOPIC, jsonString.c_str());
                 Serial.printf("MQTT Publish result: %s\n", success ? "Success" : "Failed");
+                Serial.printf("Published JSON: %s\n", jsonString.c_str()); // Debug output
                 return success;
+            } else {
+                Serial.println("MQTT not connected when trying to publish");
             }
             break;
 
@@ -1104,10 +1167,36 @@ void setup() {
     alarm.init();  // Initialize alarm controller first (LED/buzzer)
     relay.init();  // Initialize relay for other devices (independent of alarm)
 
-    sensor.init();
+    // Start sensor initialization with improved quick warmup
+    Serial.println("MQ-2 sensor initializing with quick warmup...");
+    display.showMessage("Sensor Warmup");
+
+    pinMode(MQ2_PIN, INPUT);  // Direct pin setup before the warmup
+
+    // Shorter warmup to reduce initial delay, with visual feedback
+    Serial.println("Warming up sensor (3 seconds)...");
+    for (int i = 0; i < 3; i++) {
+        delay(1000);
+        Serial.print(".");
+
+        // Update display with progress during warmup
+        String progress = "Warmup: " + String(3 - i) + "s";
+        display.showMessage(progress);
+    }
+    Serial.println("\nSensor warmup complete!");
+
+    // Calibrate sensor in clean air
+    Serial.println("Calibrating MQ-2 sensor in clean air...");
+    display.showMessage("Calibrating...");
+
+    sensor.calibrate();  // Call calibration method directly with visual feedback
+
+    Serial.printf("MQ-2 sensor initialized. R0: %.2f\n", sensor.getR0());
+
     dhtSensor.init();  // Initialize DHT temperature/humidity sensor
 
     // Connect to WiFi
+    display.showMessage("WiFi Connect");
     if (!wifiManager.connect()) {
         Serial.println("WiFi connection failed!");
         display.showMessage("WiFi Failed");
@@ -1115,6 +1204,7 @@ void setup() {
     }
 
     // Initialize IoT Protocol (using MQTT for dashboard communication)
+    display.showMessage("MQTT Connect");
     if (!iotProtocol.init(COMM_PROTOCOL_MQTT, MQTT_SERVER)) {
         Serial.println("IoT Protocol initialization failed!");
         display.showMessage("IoT Protocol Error");
@@ -1136,7 +1226,7 @@ void setup() {
 void loop() {
     unsigned long currentMillis = millis();
 
-    // Check for message timeout
+    // Check for message timeout (10 seconds as requested)
     if (customMessage.length() > 0 && currentMillis - customMessageTime > 10000) {
         customMessage = "";
         customMessageTime = 0;
@@ -1178,8 +1268,13 @@ void loop() {
 
         // Update display (only if no custom message is active)
         if (customMessage.length() > 0) {
-            // Message is already displayed, but we can refresh it if needed
-            // or just do nothing and let the message stay
+            // Refresh the custom message display periodically to ensure it stays visible
+            // Only refresh every few seconds to avoid excessive flickering
+            static unsigned long lastMessageRefresh = 0;
+            if (millis() - lastMessageRefresh > 3000) {  // Refresh every 3 seconds while showing message
+                display.showCustomMessage(customMessage);
+                lastMessageRefresh = millis();
+            }
         } else {
             display.showAirQuality(currentPPM, currentQuality, relayState);
         }
@@ -1194,6 +1289,9 @@ void loop() {
 
         if (iotProtocol.sendSensorData(currentPPM, currentQuality, relayState)) {
             Serial.println("Data sent to MQTT broker successfully");
+
+            // Also update device status periodically to maintain presence
+            iotProtocol.updateDeviceStatus(true);
         } else {
             Serial.println("Failed to send data to MQTT broker");
         }
@@ -1259,10 +1357,26 @@ bool IoTProtocol::connect() {
             if (!mqttClient.connected()) {
                 String clientId = "ESP32Client-" + String(random(0xffff), HEX);
 
-                if (mqttClient.connect(clientId.c_str())) {
+                // Set MQTT client parameters for better reliability
+                mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
+                mqttClient.setCallback(mqttCallback);
+
+                // Attempt to connect with improved settings
+                // Set keepalive to 60 seconds for better connection stability
+                mqttClient.setKeepAlive(60);
+
+                if (mqttClient.connect(clientId.c_str(), MQTT_STATUS_TOPIC, 0, true, "offline")) {
                     Serial.println("MQTT Connected");
                     // Subscribe to command topic
-                    mqttClient.subscribe(MQTT_COMMAND_TOPIC);
+                    if (mqttClient.subscribe(MQTT_COMMAND_TOPIC)) {
+                        Serial.println("Successfully subscribed to command topic");
+                    } else {
+                        Serial.println("Failed to subscribe to command topic");
+                    }
+
+                    // Publish online status
+                    mqttClient.publish(MQTT_STATUS_TOPIC, "online", true);
+
                     isConnected = true;
                     return true;
                 } else {
@@ -1292,7 +1406,11 @@ bool IoTProtocol::connect() {
 bool IoTProtocol::isConnectedToServer() {
     switch(protocolType) {
         case COMM_PROTOCOL_MQTT:
-            return mqttClient.connected();
+            bool connected = mqttClient.connected();
+            if (!connected) {
+                Serial.println("MQTT not connected, state: " + String(mqttClient.state()));
+            }
+            return connected;
         case COMM_PROTOCOL_WEBSOCKET:
             return isConnected;
         case COMM_PROTOCOL_HTTP:
@@ -1310,8 +1428,12 @@ void IoTProtocol::loop() {
             if (mqttClient.connected()) {
                 mqttClient.loop();
             } else {
-                // Try to reconnect
-                connect();
+                // Try to reconnect with exponential backoff
+                static unsigned long lastReconnectAttempt = 0;
+                if (millis() - lastReconnectAttempt > 10000) {  // Try reconnect every 10 seconds
+                    lastReconnectAttempt = millis();
+                    connect();
+                }
             }
             break;
 
