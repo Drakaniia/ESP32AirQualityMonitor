@@ -4,6 +4,7 @@
 #include <ArduinoJson.h>
 #include <Adafruit_SSD1306.h>
 #include <Wire.h>
+#include "DHT.h"
 #include "config.h"
 #include "wifi_manager.h"
 #include "iot_protocol.h"
@@ -19,6 +20,7 @@ MQ2Sensor sensor;
 OLEDDisplay display;
 RelayController relay;
 AlertController alert;
+DHT dht(DHT_PIN, DHT_TYPE);
 
 // Global variables
 unsigned long lastSensorRead = 0;
@@ -30,6 +32,14 @@ String currentQuality = "";
 bool relayState = false;
 int samplingInterval = 5; // seconds
 String customMessage = "";
+float currentTemperature = 0.0;
+float currentHumidity = 0.0;
+
+// DHT11 calibration variables
+float tempReadings[DHT_READING_SAMPLES];
+float humidityReadings[DHT_READING_SAMPLES];
+int currentReadingIndex = 0;
+bool dhtInitialized = false;
 
 void setup() {
     Serial.begin(115200);
@@ -47,6 +57,15 @@ void setup() {
     relayState = true;
     
     sensor.init();
+    dht.begin();
+    
+    // Initialize DHT11 calibration arrays
+    for (int i = 0; i < DHT_READING_SAMPLES; i++) {
+        tempReadings[i] = 0.0;
+        humidityReadings[i] = 0.0;
+    }
+    dhtInitialized = true;
+    Serial.println("DHT11 sensor initialized with calibration");
     
     // Connect to WiFi
     if (!wifiManager.connect()) {
@@ -76,6 +95,58 @@ void setup() {
 
 void processCommands(String commandsJson);
 
+void readCalibratedDHT() {
+    // Take multiple readings for stability
+    float tempSum = 0.0;
+    float humiditySum = 0.0;
+    int validReadings = 0;
+    
+    for (int i = 0; i < DHT_READING_SAMPLES; i++) {
+        float rawTemp = dht.readTemperature();
+        float rawHumidity = dht.readHumidity();
+        
+        // Validate readings
+        if (!isnan(rawTemp) && !isnan(rawHumidity) && 
+            rawTemp >= -40 && rawTemp <= 80 &&  // DHT11 valid temperature range
+            rawHumidity >= 0 && rawHumidity <= 100) {  // DHT11 valid humidity range
+            
+            // Apply calibration offsets
+            float calibratedTemp = rawTemp + DHT_TEMP_OFFSET;
+            float calibratedHumidity = rawHumidity + DHT_HUMID_OFFSET;
+            
+            // Clamp values to realistic ranges
+            calibratedTemp = constrain(calibratedTemp, -20.0, 50.0);
+            calibratedHumidity = constrain(calibratedHumidity, 10.0, 95.0);
+            
+            tempSum += calibratedTemp;
+            humiditySum += calibratedHumidity;
+            validReadings++;
+            
+            // Small delay between readings for DHT11 stability
+            delay(DHT_READING_DELAY / DHT_READING_SAMPLES);
+        } else {
+            Serial.printf("Invalid DHT reading %d: Temp=%.2f, Humidity=%.2f\n", 
+                        i, rawTemp, rawHumidity);
+        }
+    }
+    
+    // Calculate averages if we have valid readings
+    if (validReadings > 0) {
+        currentTemperature = tempSum / validReadings;
+        currentHumidity = humiditySum / validReadings;
+        
+        Serial.printf("Calibrated DHT11 - Temperature: %.2f°C, Humidity: %.2f%% (based on %d readings)\n", 
+                    currentTemperature, currentHumidity, validReadings);
+    } else {
+        Serial.println("No valid DHT11 readings obtained");
+        // Keep previous values if available, otherwise set to 0
+        if (currentTemperature == 0.0 && currentHumidity == 0.0) {
+            currentTemperature = 0.0;
+            currentHumidity = 0.0;
+        }
+    }
+}
+
 void loop() {
     unsigned long currentMillis = millis();
 
@@ -85,6 +156,14 @@ void loop() {
 
         currentPPM = sensor.readPPM();
         currentQuality = sensor.getAirQuality(currentPPM);
+
+        // Read calibrated temperature and humidity from DHT sensor
+        if (dhtInitialized) {
+            readCalibratedDHT();
+        } else {
+            currentTemperature = 0.0;
+            currentHumidity = 0.0;
+        }
 
         Serial.printf("PPM: %.2f, Quality: %s\n", currentPPM, currentQuality.c_str());
         
@@ -110,7 +189,7 @@ void loop() {
     if (currentMillis - lastMQTTUpdate >= MQTT_UPDATE_INTERVAL) {
         lastMQTTUpdate = currentMillis;
 
-        if (iotProtocol.publishSensorData(currentPPM, currentQuality, relayState)) {
+        if (iotProtocol.publishSensorData(currentPPM, currentQuality, relayState, currentTemperature, currentHumidity)) {
             Serial.println("Data sent to MQTT broker successfully");
         } else {
             Serial.println("Failed to send data to MQTT broker");

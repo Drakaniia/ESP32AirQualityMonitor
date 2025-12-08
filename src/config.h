@@ -14,6 +14,7 @@
 #define BUZZER_PIN 27         // Digital pin for buzzer
 #define OLED_SDA 21           // I2C SDA pin for OLED
 #define OLED_SCL 22           // I2C SCL pin for OLED
+#define DHT_PIN 14            // Digital pin for DHT22 temperature/humidity sensor
 
 // OLED Display Configuration
 #define SCREEN_WIDTH 128      // OLED display width, in pixels
@@ -22,6 +23,15 @@
 
 // MQ-2 Sensor Configuration
 #define MQ2_R0 0.0            // Initial R0 value for MQ-2 sensor (will be calibrated during initialization)
+
+// DHT Sensor Configuration
+#define DHT_TYPE DHT11        // Type of DHT sensor (DHT22, DHT11, etc.)
+
+// DHT11 Calibration Settings
+#define DHT_TEMP_OFFSET -2.0   // Temperature calibration offset (adjust based on testing)
+#define DHT_HUMID_OFFSET 5.0   // Humidity calibration offset (adjust based on testing)
+#define DHT_READING_SAMPLES 3  // Number of readings to average for stability
+#define DHT_READING_DELAY 2000 // Delay between readings (ms) - DHT11 needs 2+ seconds
 
 // Timing Configuration
 #define SENSOR_READ_INTERVAL 5000     // Sensor reading interval (ms)
@@ -36,7 +46,8 @@
 #define COMM_PROTOCOL_MQTT 1
 #define COMM_PROTOCOL_WEBSOCKET 2
 #define COMM_PROTOCOL_HTTP 3
-#define COMM_PROTOCOL COMM_PROTOCOL_MQTT    // Default communication protocol
+// #define COMM_PROTOCOL COMM_PROTOCOL_HTTP    // Default communication protocol
+#define COMM_PROTOCOL COMM_PROTOCOL_MQTT   
 
 // MQTT Configuration
 #define MQTT_SERVER "broker.hivemq.com"  // Public MQTT broker

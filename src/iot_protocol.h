@@ -39,7 +39,7 @@ public:
     IoTProtocol();
     bool init(int protocol, String server = "");
     bool connect();
-    bool publishSensorData(float ppm, String quality, bool relayState);
+    bool publishSensorData(float ppm, String quality, bool relayState, float temperature = 0.0, float humidity = 0.0);
     bool sendCommand(String command);
     String receiveCommand();
     bool updateDeviceStatus(bool online);

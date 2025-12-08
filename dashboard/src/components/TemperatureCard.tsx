@@ -27,19 +27,19 @@ export default function TemperatureCard({ reading }: TemperatureCardProps) {
 
   const getTemperatureColor = (temp: number | undefined) => {
     if (temp === undefined) return 'bg-gray-500'
-    if (temp < 15) return 'bg-blue-500' // Cold
-    if (temp <= 25) return 'bg-green-500' // Comfortable
-    if (temp <= 35) return 'bg-orange-500' // Hot
-    return 'bg-red-500' // Very hot
+    if (temp < 18) return 'bg-blue-500' // Cold
+    if (temp <= 28) return 'bg-green-500' // Comfortable
+    if (temp <= 32) return 'bg-orange-500' // Warm
+    return 'bg-red-500' // Hot
   }
 
   const getTemperatureStatus = (temp: number | undefined) => {
     if (temp === undefined) return { status: 'NO DATA', color: 'text-white bg-gray-500/50' }
     if (temp < 0) return { status: 'FREEZING', color: 'text-white bg-blue-500/50' }
-    if (temp < 15) return { status: 'COLD', color: 'text-white bg-blue-500/50' }
-    if (temp <= 25) return { status: 'COMFORT', color: 'text-white bg-green-500/50' }
-    if (temp <= 35) return { status: 'HOT', color: 'text-white bg-orange-500/50' }
-    return { status: 'VERY HOT', color: 'text-white bg-red-500/50' }
+    if (temp < 18) return { status: 'COLD', color: 'text-white bg-blue-500/50' }
+    if (temp <= 28) return { status: 'COMFORT', color: 'text-white bg-green-500/50' }
+    if (temp <= 32) return { status: 'WARM', color: 'text-white bg-orange-500/50' }
+    return { status: 'HOT', color: 'text-white bg-red-500/50' }
   }
 
   // Calculate heat index if both temperature and humidity are available

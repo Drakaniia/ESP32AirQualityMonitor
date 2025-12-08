@@ -119,13 +119,15 @@ bool IoTProtocol::connect() {
     }
 }
 
-bool IoTProtocol::publishSensorData(float ppm, String quality, bool relayState) {
+bool IoTProtocol::publishSensorData(float ppm, String quality, bool relayState, float temperature, float humidity) {
     // Create JSON payload
     DynamicJsonDocument doc(512);
     doc["device_id"] = "esp32_01";
     doc["ppm"] = ppm;
     doc["quality"] = quality;
     doc["relay_state"] = relayState ? "ON" : "OFF";
+    doc["temperature"] = temperature;
+    doc["humidity"] = humidity;
     doc["timestamp"] = millis();
     
     String jsonString;
@@ -192,10 +194,10 @@ bool IoTProtocol::updateDeviceStatus(bool online) {
             
         case COMM_PROTOCOL_HTTP:
             {
-                httpClient.begin("http://192.168.1.100:3000/api/sensor-data");
-                httpClient.addHeader("Content-Type", "application/json");
-                
-                int httpResponseCode = httpClient.PUT(jsonString);
+                 httpClient.begin("http://localhost:3000/api/sensor-data");
+                 httpClient.addHeader("Content-Type", "application/json");
+                 
+                 int httpResponseCode = httpClient.PUT(jsonString);
                 httpClient.end();
                 
                 return (httpResponseCode > 0 && httpResponseCode < 300);
@@ -234,10 +236,10 @@ String IoTProtocol::receiveCommand() {
             
         case COMM_PROTOCOL_HTTP:
             {
-                // HTTP is not ideal for receiving commands in real-time
-                // Would need to poll for commands
-                httpClient.begin("http://192.168.1.100:3000/api/device-commands/esp32_01");
-                int httpResponseCode = httpClient.GET();
+                 // HTTP is not ideal for receiving commands in real-time
+                 // Would need to poll for commands
+                 httpClient.begin("http://localhost:3000/api/device-commands/esp32_01");
+                 int httpResponseCode = httpClient.GET();
                 
                 if (httpResponseCode > 0) {
                     command = httpClient.getString();
