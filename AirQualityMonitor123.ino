@@ -1092,6 +1092,11 @@ public:
     void init();
     float readTemperature();
     float readHumidity();
+    float readTemperatureWithAveraging(int samples = DHT_READING_SAMPLES);
+    float readHumidityWithAveraging(int samples = DHT_READING_SAMPLES);
+    float readTemperatureWithRetry(int maxRetries = 3);
+    float readHumidityWithRetry(int maxRetries = 3);
+    bool readBothWithAveragingAndRetry(float& outTemp, float& outHumidity, int samples = DHT_READING_SAMPLES, int maxRetries = 2);
     bool isValidReading();
 };
 
@@ -1109,23 +1114,254 @@ void DHTSensor::init() {
 float DHTSensor::readTemperature() {
     // Read temperature in Celsius
     temperature = dht.readTemperature();
+
+    // Apply calibration offset from config.h
+    temperature += DHT_TEMP_OFFSET;
+
     if (isnan(temperature)) {
         Serial.println("Failed to read temperature from DHT sensor!");
         return 0.0;
     }
-    Serial.printf("Temperature: %.2f°C\n", temperature);
+    Serial.printf("Temperature: %.2f°C (calibrated)\n", temperature);
     return temperature;
 }
 
 float DHTSensor::readHumidity() {
     // Read humidity
     humidity = dht.readHumidity();
+
+    // Apply calibration offset from config.h
+    humidity += DHT_HUMID_OFFSET;
+
+    // Ensure humidity stays within reasonable bounds
+    if (humidity < 0) humidity = 0;
+    if (humidity > 100) humidity = 100;
+
     if (isnan(humidity)) {
         Serial.println("Failed to read humidity from DHT sensor!");
         return 0.0;
     }
-    Serial.printf("Humidity: %.2f%%\n", humidity);
+    Serial.printf("Humidity: %.2f%% (calibrated)\n", humidity);
     return humidity;
+}
+
+float DHTSensor::readTemperatureWithAveraging(int samples) {
+    float totalTemp = 0;
+    int validReadings = 0;
+
+    for (int i = 0; i < samples; i++) {
+        float temp = dht.readTemperature();
+
+        if (!isnan(temp)) {
+            // Apply calibration offset
+            temp += DHT_TEMP_OFFSET;
+            totalTemp += temp;
+            validReadings++;
+        } else {
+            Serial.printf("Invalid temperature reading at sample %d\n", i);
+        }
+
+        // Add small delay between readings to improve accuracy
+        if (i < samples - 1) {
+            delay(50); // Small delay for sensor stabilization
+        }
+    }
+
+    if (validReadings > 0) {
+        temperature = totalTemp / validReadings;
+        Serial.printf("Temperature: %.2f°C (average of %d valid readings)\n", temperature, validReadings);
+    } else {
+        Serial.println("All temperature readings were invalid!");
+        temperature = 0.0;
+    }
+
+    return temperature;
+}
+
+float DHTSensor::readHumidityWithAveraging(int samples) {
+    float totalHumidity = 0;
+    int validReadings = 0;
+
+    for (int i = 0; i < samples; i++) {
+        float humidityReading = dht.readHumidity();
+
+        if (!isnan(humidityReading)) {
+            // Apply calibration offset
+            humidityReading += DHT_HUMID_OFFSET;
+
+            // Ensure humidity stays within reasonable bounds
+            if (humidityReading < 0) humidityReading = 0;
+            if (humidityReading > 100) humidityReading = 100;
+
+            totalHumidity += humidityReading;
+            validReadings++;
+        } else {
+            Serial.printf("Invalid humidity reading at sample %d\n", i);
+        }
+
+        // Add small delay between readings to improve accuracy
+        if (i < samples - 1) {
+            delay(50); // Small delay for sensor stabilization
+        }
+    }
+
+    if (validReadings > 0) {
+        humidity = totalHumidity / validReadings;
+        Serial.printf("Humidity: %.2f%% (average of %d valid readings)\n", humidity, validReadings);
+    } else {
+        Serial.println("All humidity readings were invalid!");
+        humidity = 0.0;
+    }
+
+    return humidity;
+}
+
+float DHTSensor::readTemperatureWithRetry(int maxRetries) {
+    for (int attempt = 0; attempt < maxRetries; attempt++) {
+        float temp = dht.readTemperature();
+
+        if (!isnan(temp)) {
+            // Apply calibration offset
+            temp += DHT_TEMP_OFFSET;
+            temperature = temp;
+            Serial.printf("Temperature: %.2f°C (read on attempt %d)\n", temperature, attempt + 1);
+            return temperature;
+        }
+
+        Serial.printf("Temperature read failed on attempt %d, retrying...\n", attempt + 1);
+
+        // Wait before retrying
+        if (attempt < maxRetries - 1) {
+            delay(250); // Wait 250ms before next attempt
+        }
+    }
+
+    Serial.println("Temperature read failed after all retries!");
+    temperature = 0.0;
+    return temperature;
+}
+
+float DHTSensor::readHumidityWithRetry(int maxRetries) {
+    for (int attempt = 0; attempt < maxRetries; attempt++) {
+        float humidityReading = dht.readHumidity();
+
+        if (!isnan(humidityReading)) {
+            // Apply calibration offset
+            humidityReading += DHT_HUMID_OFFSET;
+
+            // Ensure humidity stays within reasonable bounds
+            if (humidityReading < 0) humidityReading = 0;
+            if (humidityReading > 100) humidityReading = 100;
+
+            humidity = humidityReading;
+            Serial.printf("Humidity: %.2f%% (read on attempt %d)\n", humidity, attempt + 1);
+            return humidity;
+        }
+
+        Serial.printf("Humidity read failed on attempt %d, retrying...\n", attempt + 1);
+
+        // Wait before retrying
+        if (attempt < maxRetries - 1) {
+            delay(250); // Wait 250ms before next attempt
+        }
+    }
+
+    Serial.println("Humidity read failed after all retries!");
+    humidity = 0.0;
+    return humidity;
+}
+
+bool DHTSensor::readBothWithAveragingAndRetry(float& outTemp, float& outHumidity, int samples, int maxRetries) {
+    for (int retry = 0; retry < maxRetries; retry++) {
+        float totalTemp = 0, totalHumidity = 0;
+        int validTempReadings = 0, validHumidityReadings = 0;
+        bool allReadingsValid = true;
+
+        // Attempt to get multiple samples for averaging
+        for (int i = 0; i < samples; i++) {
+            float temp = dht.readTemperature();
+            float humidity = dht.readHumidity();
+
+            // Check if readings are valid
+            bool tempValid = !isnan(temp);
+            bool humidityValid = !isnan(humidity);
+
+            if (tempValid) {
+                // Apply calibration offset
+                temp += DHT_TEMP_OFFSET;
+                totalTemp += temp;
+                validTempReadings++;
+            } else {
+                allReadingsValid = false;
+                Serial.printf("Invalid temperature reading at sample %d, retry %d\n", i, retry);
+            }
+
+            if (humidityValid) {
+                // Apply calibration offset
+                humidity += DHT_HUMID_OFFSET;
+
+                // Ensure humidity stays within reasonable bounds
+                if (humidity < 0) humidity = 0;
+                if (humidity > 100) humidity = 100;
+
+                totalHumidity += humidity;
+                validHumidityReadings++;
+            } else {
+                allReadingsValid = false;
+                Serial.printf("Invalid humidity reading at sample %d, retry %d\n", i, retry);
+            }
+
+            // Add small delay between readings
+            if (i < samples - 1) {
+                delay(50);
+            }
+        }
+
+        // Calculate averages if we have at least one valid reading for each
+        bool tempSuccess = (validTempReadings > 0);
+        bool humiditySuccess = (validHumidityReadings > 0);
+
+        if (tempSuccess && humiditySuccess) {
+            outTemp = totalTemp / validTempReadings;
+            outHumidity = totalHumidity / validHumidityReadings;
+            temperature = outTemp;
+            this->humidity = outHumidity;
+
+            Serial.printf("Temperature: %.2f°C (average of %d readings), Humidity: %.2f%% (average of %d readings) - Read on retry %d\n",
+                         outTemp, validTempReadings, outHumidity, validHumidityReadings, retry + 1);
+            return true; // Both readings successful
+        } else if (tempSuccess && !humiditySuccess) {
+            // If we only have temperature, we can still return that
+            outTemp = totalTemp / validTempReadings;
+            outHumidity = -1; // Indicate invalid humidity reading
+            temperature = outTemp;
+
+            Serial.printf("Temperature: %.2f°C (average of %d readings) - Partial read on retry %d\n",
+                         outTemp, validTempReadings, retry + 1);
+            return true;
+        } else if (!tempSuccess && humiditySuccess) {
+            // If we only have humidity, we can still return that
+            outTemp = -1000; // Indicate invalid temperature reading
+            outHumidity = totalHumidity / validHumidityReadings;
+            this->humidity = outHumidity;
+
+            Serial.printf("Humidity: %.2f%% (average of %d readings) - Partial read on retry %d\n",
+                         outHumidity, validHumidityReadings, retry + 1);
+            return true;
+        }
+
+        // If we reach here, we need to retry
+        Serial.printf("Both readings failed on retry %d, attempting again...\n", retry + 1);
+        if (retry < maxRetries - 1) {
+            delay(500); // Wait before next retry
+        }
+    }
+
+    // If we get here, all retries failed
+    Serial.println("All retries failed for both temperature and humidity!");
+    outTemp = 0.0;
+    outHumidity = 0.0;
+    return false;
 }
 
 bool DHTSensor::isValidReading() {
@@ -1242,9 +1478,16 @@ void loop() {
         currentPPM = sensor.readPPM();
         currentQuality = sensor.getAirQuality(currentPPM);
 
-        // Read temperature and humidity
-        currentTemperature = dhtSensor.readTemperature();
-        currentHumidity = dhtSensor.readHumidity();
+        // Read temperature and humidity with averaging and retry for maximum accuracy
+        float temp, humidity;
+        if (dhtSensor.readBothWithAveragingAndRetry(temp, humidity)) {
+            currentTemperature = temp;
+            currentHumidity = humidity;
+        } else {
+            // Fallback to basic read if advanced method fails
+            currentTemperature = dhtSensor.readTemperature();
+            currentHumidity = dhtSensor.readHumidity();
+        }
 
         Serial.printf("PPM: %.2f, Quality: %s\n", currentPPM, currentQuality.c_str());
         Serial.printf("Temperature: %.2f°C, Humidity: %.2f%%\n", currentTemperature, currentHumidity);
