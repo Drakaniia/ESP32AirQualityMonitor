@@ -5,6 +5,7 @@ import { useAuth } from '@/components/AuthProvider'
 import { useRouter } from 'next/navigation'
 import { SimulationProvider, useSensorData, useAlertData, useSimulationContext } from '@/simulation/SimulationProvider'
 import AirQualityCard from '@/components/AirQualityCard'
+import TemperatureCard from '@/components/TemperatureCard'
 import DeviceStatusCard from '@/components/DeviceStatusCard'
 import ControlPanel from '@/components/ControlPanel'
 import ChartContainer from '@/components/ChartContainer'
@@ -267,8 +268,9 @@ function DashboardContent() {
             <SafetyStatus reading={displayReading} deviceOnline={displayOnline} />
 
             {/* Status Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <AirQualityCard reading={displayReading} />
+              <TemperatureCard reading={displayReading} />
               <DeviceStatusCard online={displayOnline} lastUpdate={displayReading?.timestamp} />
               <GlassCard className="p-6">
                 <h3 className="text-lg font-semibold text-white mb-4">Quick Stats</h3>

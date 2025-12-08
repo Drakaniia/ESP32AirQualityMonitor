@@ -9,7 +9,7 @@
 
 // Hardware Pin Configuration
 #define MQ2_PIN 34            // Analog pin for MQ-2 sensor
-#define RELAY_PIN 26          // Digital pin for relay module (controls power to buzzer and LED)
+#define RELAY_PIN 26          // Digital pin for relay module (for controlling external devices - independent of LED/buzzer)
 #define LED_PIN 25            // Digital pin for LED
 #define BUZZER_PIN 27         // Digital pin for buzzer
 #define OLED_SDA 21           // I2C SDA pin for OLED

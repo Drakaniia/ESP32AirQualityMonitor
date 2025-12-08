@@ -6,6 +6,8 @@ import GlassCard from './GlassCard'
 
 interface DeviceCommand {
   relay_state: string
+  buzzer_state?: boolean
+  led_state?: boolean
   sampling_interval?: number
   oled_message: string
   last_update: number

@@ -8,6 +8,8 @@ interface SensorReading {
   ppm: number
   quality: string
   relay_state: string
+  temperature?: number
+  humidity?: number
   timestamp: string
 }
 
@@ -24,7 +26,9 @@ interface AlertEntry {
 
 interface DeviceCommand {
   relay_state: string
-  sampling_interval: number
+  buzzer_state?: boolean
+  led_state?: boolean
+  sampling_interval?: number
   oled_message: string
   last_update: number
 }

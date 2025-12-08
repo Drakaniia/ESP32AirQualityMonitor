@@ -6,6 +6,8 @@ interface SensorReading {
   ppm: number
   quality: string
   relay_state: string
+  temperature?: number
+  humidity?: number
   timestamp: string
 }
 

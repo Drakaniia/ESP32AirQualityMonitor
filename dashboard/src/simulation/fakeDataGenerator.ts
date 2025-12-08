@@ -3,6 +3,8 @@ interface SensorReading {
   ppm: number
   quality: string
   relay_state: string
+  temperature?: number
+  humidity?: number
   timestamp: string
 }
 
@@ -110,11 +112,32 @@ export class FakeDataGenerator {
     const quality = this.getQualityFromPPM(ppm)
     const relayState = this.shouldRelayBeOn(quality)
 
+    // Generate simulated temperature (20-30°C) and humidity (30-70%)
+    // These can vary based on air quality and relay status
+    let temperature = 22 + (Math.random() * 6 - 3) // Base 22°C ±3°C
+    let humidity = 50 + (Math.random() * 20 - 10) // Base 50% ±10%
+
+    // Adjust temperature based on relay state (if relay is ON, might indicate heating/cooling)
+    if (relayState === 'ON') {
+      temperature += Math.random() * 2 - 1 // Add ±1°C when relay is active
+    }
+
+    // Adjust humidity based on air quality (poor air quality might indicate moisture issues)
+    if (quality === 'Poor' || quality === 'Very Poor' || quality === 'Hazardous') {
+      humidity += Math.random() * 10 // Increase humidity when air quality is poor
+    }
+
+    // Ensure values are within reasonable ranges
+    temperature = Math.max(15, Math.min(40, temperature))
+    humidity = Math.max(20, Math.min(90, humidity))
+
     return {
       device_id: this.deviceId,
       ppm,
       quality,
       relay_state: relayState,
+      temperature,
+      humidity,
       timestamp: new Date().toISOString(),
     }
   }

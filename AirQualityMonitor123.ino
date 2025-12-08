@@ -393,7 +393,7 @@ unsigned long RelayController::getLastToggleTime() {
     return lastToggleTime;
 }
 
-// Alarm Controller class for LED and Buzzer
+// Alarm Controller class for LED and Buzzer (Direct GPIO Control - Independent of Relay)
 class AlarmController {
 private:
     int ledPin;
@@ -423,8 +423,8 @@ public:
 };
 
 AlarmController::AlarmController() {
-    ledPin = LED_PIN;
-    buzzerPin = BUZZER_PIN;
+    ledPin = LED_PIN;           // Direct GPIO control of LED (independent of relay)
+    buzzerPin = BUZZER_PIN;     // Direct GPIO control of buzzer (independent of relay)
     ledState = false;
     buzzerState = false;
     alarmActive = false;
@@ -436,8 +436,8 @@ AlarmController::AlarmController() {
 }
 
 bool AlarmController::init() {
-    pinMode(ledPin, OUTPUT);
-    pinMode(buzzerPin, OUTPUT);
+    pinMode(ledPin, OUTPUT);      // Configure LED pin for direct GPIO control
+    pinMode(buzzerPin, OUTPUT);   // Configure buzzer pin for direct GPIO control
 
     // Initialize to OFF state
     digitalWrite(ledPin, LOW);
@@ -448,7 +448,7 @@ bool AlarmController::init() {
     alarmActive = false;
     isInitialized = true;
 
-    Serial.println("Alarm controller initialized");
+    Serial.println("Alarm controller initialized (LED/Buzzer directly controlled by GPIO)");
     return true;
 }
 
@@ -638,20 +638,20 @@ void OLEDDisplay::showAirQuality(float ppm, String quality, bool relayState) {
         display.println(quality);
     }
 
-    // Relay Status
+    // Relay Status (for devices controlled by relay)
     display.setCursor(10, 52);
     display.print("Relay: ");
     display.print(relayState ? "ON" : "OFF");
 
-    // Add alarm status indicator
+    // Add alarm status indicator (for LED/buzzer which are now directly controlled)
     bool alarmStatus = alarm.getAlarmState();
     if (alarmStatus) {
         display.print(" ALARM!");
     }
 
-    // Status indicator
+    // Status indicator - use for alarm status instead of relay when showing alarm
     display.drawCircle(120, 8, 3, SSD1306_WHITE);
-    if (relayState) {
+    if (alarmStatus) {  // Show alarm status instead of relay status when alarm is active
         display.fillCircle(120, 8, 2, SSD1306_WHITE);
     }
 
@@ -879,7 +879,7 @@ bool IoTProtocol::sendSensorData(float ppm, String quality, bool relayState) {
     doc["ppm"] = ppm;
     doc["quality"] = quality;
     doc["relay_state"] = relayState ? "ON" : "OFF";
-    doc["alarm_state"] = alarm.getAlarmState() ? "ACTIVE" : "INACTIVE";
+    doc["alarm_state"] = alarm.getAlarmState() ? "ACTIVE" : "INACTIVE";  // LED/buzzer alarm state
     doc["timestamp"] = getCurrentTimestamp();
 
     String jsonString;
@@ -1038,8 +1038,8 @@ void setup() {
     display.init();
     display.showWelcome();
 
-    relay.init();
-    alarm.init();
+    alarm.init();  // Initialize alarm controller first (LED/buzzer)
+    relay.init();  // Initialize relay for other devices (independent of alarm)
 
     sensor.init();
 
@@ -1104,13 +1104,8 @@ void loop() {
             Serial.println("ALARM DEACTIVATED: PPM returned to normal levels");
         }
 
-        // If relay is turned OFF by external command, also turn off alarm
-        if (!relayState && alarmState) {
-            // When relay is turned off, also turn off the alarm
-            alarmState = false;
-            alarm.disableAlarm();
-            Serial.println("ALARM DEACTIVATED: Relay turned OFF");
-        }
+        // The alarm now operates independently of the relay
+        // (Removed the relay-dependent alarm deactivation)
 
         // Update display (only if no custom message is active)
         if (customMessage.length() > 0) {
@@ -1119,6 +1114,9 @@ void loop() {
         } else {
             display.showAirQuality(currentPPM, currentQuality, relayState);
         }
+
+        // Note: Alarm (LED/buzzer) operates independently of relay state
+        // based on air quality readings and alarm state
     }
 
     // Send sensor data to MQTT broker every 30 seconds
@@ -1276,12 +1274,7 @@ void processCommands(String commandsJson) {
             relay.setState(relayState);
             Serial.printf("Relay state changed to: %s\n", relayState ? "ON" : "OFF");
 
-            // If the relay is turned OFF, also turn off the alarm
-            if (!relayState && alarmState) {
-                alarmState = false;
-                alarm.disableAlarm();
-                Serial.println("ALARM DEACTIVATED: Relay turned OFF via command");
-            }
+            // Relay is now independent of alarm - no longer turn off alarm when relay is OFF
         }
     }
 

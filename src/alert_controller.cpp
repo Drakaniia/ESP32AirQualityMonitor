@@ -31,7 +31,7 @@ bool AlertController::init(RelayController* relay) {
     digitalWrite(ledPin, LOW);
     digitalWrite(buzzerPin, LOW);
     
-    // Test buzzer on startup
+    // Test buzzer on startup (using simple digitalWrite for active buzzer)
     Serial.println("Testing buzzer on startup...");
     digitalWrite(buzzerPin, HIGH);
     delay(200); // Short beep
@@ -143,19 +143,18 @@ void AlertController::update() {
             lastBeepTime = currentTime;
             buzzerState = !buzzerState;
             if (buzzerState) {
-                digitalWrite(buzzerPin, HIGH);
-                tone(buzzerPin, 1000); // 1kHz tone for passive buzzers
-                Serial.printf("Buzzer ON: Pin HIGH + 1000Hz tone\n");
+                digitalWrite(buzzerPin, HIGH); // Simple digitalWrite for active buzzer
+                Serial.printf("Buzzer ON: Pin HIGH\n");
             } else {
                 digitalWrite(buzzerPin, LOW);
-                noTone(buzzerPin); // Stop tone
-                Serial.printf("Buzzer OFF: Pin LOW + tone stopped\n");
+                Serial.printf("Buzzer OFF: Pin LOW\n");
             }
         }
     } else {
         // Ensure LED and buzzer are off when alert is not active
         digitalWrite(ledPin, LOW);
         digitalWrite(buzzerPin, LOW);
+        Serial.println("Alert inactive - LED and buzzer turned OFF");
     }
 }
 
@@ -169,13 +168,26 @@ void AlertController::checkPPMLevel(float currentPPM) {
     }
     
     // Only check PPM levels if manual override is not active
-    if (!manualOverride) {
+    if (!manualOverride && !buzzerManualOverride && !ledManualOverride) {
+        Serial.printf("Checking PPM: %.2f, Current alert state: %s\n", currentPPM, isActive ? "ACTIVE" : "INACTIVE");
+        
         // Activate alert when PPM reaches 1000 or higher
         if (currentPPM >= 1000) {
-            activate();
-        } else if (currentPPM < 900) { // Deactivate when PPM returns to normal (below 900)
-            deactivate();
+            if (!isActive) {
+                Serial.printf("PPM %.2f >= 1000 - ACTIVATING alert\n", currentPPM);
+                activate();
+            }
+        } else if (currentPPM < 1000) { // Deactivate when PPM returns to normal (below 1000)
+            if (isActive) {
+                Serial.printf("PPM %.2f < 1000 - DEACTIVATING alert\n", currentPPM);
+                deactivate();
+            }
         }
+    } else {
+        Serial.printf("Manual override active - skipping PPM check (manual: %s, buzzer: %s, led: %s)\n", 
+                     manualOverride ? "YES" : "NO", 
+                     buzzerManualOverride ? "YES" : "NO", 
+                     ledManualOverride ? "YES" : "NO");
     }
 }
 
@@ -219,24 +231,16 @@ void AlertController::setBuzzerManualOverride(bool override, bool state) {
     if (override) {
         // Immediately apply buzzer state
         if (state) {
-            // Try both active and passive buzzer methods
             digitalWrite(buzzerPin, HIGH);
             Serial.printf("Set pin %d to HIGH (active buzzer)\n", buzzerPin);
-            
-            // Also try tone for passive buzzers
-            tone(buzzerPin, 1000); // 1kHz tone for passive buzzers
-            Serial.printf("Set pin %d to 1000Hz tone (passive buzzer)\n", buzzerPin);
         } else {
             digitalWrite(buzzerPin, LOW);
             Serial.printf("Set pin %d to LOW\n", buzzerPin);
-            noTone(buzzerPin); // Stop tone generation
-            Serial.printf("Stopped tone on pin %d\n", buzzerPin);
         }
         Serial.printf("Buzzer manual override activated - buzzer forced %s\n", state ? "ON" : "OFF");
     } else {
         digitalWrite(buzzerPin, LOW);
         Serial.printf("Set pin %d to LOW (override cleared)\n", buzzerPin);
-        // noTone(buzzerPin); // Stop tone generation
         Serial.println("Buzzer manual override deactivated - returning to automatic control");
     }
     Serial.printf("=== END BUZZER OVERRIDE ===\n");

@@ -33,6 +33,8 @@ interface SensorReading {
   ppm: number
   quality: string
   relay_state: string
+  temperature?: number
+  humidity?: number
   timestamp: string
 }
 
@@ -130,6 +132,37 @@ export default function ChartContainer({ data }: ChartContainerProps) {
         pointBorderColor: '#fff',
         pointBorderWidth: 1,
         borderWidth: 3,
+        yAxisID: 'y',
+      },
+      {
+        label: 'Temperature (°C)',
+        data: filteredData.map(reading => reading.temperature !== undefined ? reading.temperature : null),
+        borderColor: 'rgb(249, 115, 22)', // orange-500
+        backgroundColor: 'rgba(249, 115, 22, 0.1)',
+        tension: 0.4,
+        fill: false,
+        pointRadius: filteredData.length <= 50 ? 4 : 2,
+        pointHoverRadius: 6,
+        pointBackgroundColor: 'rgb(249, 115, 22)',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 1,
+        borderWidth: 2,
+        yAxisID: 'y1',
+      },
+      {
+        label: 'Humidity (%)',
+        data: filteredData.map(reading => reading.humidity !== undefined ? reading.humidity : null),
+        borderColor: 'rgb(14, 165, 233)', // sky-500
+        backgroundColor: 'rgba(14, 165, 233, 0.1)',
+        tension: 0.4,
+        fill: false,
+        pointRadius: filteredData.length <= 50 ? 4 : 2,
+        pointHoverRadius: 6,
+        pointBackgroundColor: 'rgb(14, 165, 233)',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 1,
+        borderWidth: 2,
+        yAxisID: 'y1',
       },
       {
         label: 'Quality Thresholds',
@@ -152,6 +185,7 @@ export default function ChartContainer({ data }: ChartContainerProps) {
         pointRadius: 0,
         pointHoverRadius: 0,
         borderWidth: 2,
+        yAxisID: 'y',
       },
     ],
   }
@@ -213,21 +247,35 @@ export default function ChartContainer({ data }: ChartContainerProps) {
               if (reading) {
                 label += ` (${reading.quality})`
               }
-            } else {
+            } else if (context.datasetIndex === 1) {
+              label += context.parsed.y.toFixed(1) + '°C'
+            } else if (context.datasetIndex === 2) {
+              label += context.parsed.y.toFixed(1) + '%'
+            } else { // Quality thresholds
               label += context.parsed.y.toFixed(0) + ' PPM Threshold'
             }
             return label
           },
           afterLabel: function(context: any) {
-            if (context.datasetIndex === 0 && filteredData[context.dataIndex]) {
-              const reading = filteredData[context.dataIndex]
-              return [
+            const reading = filteredData[context.dataIndex]
+            if (reading) {
+              const additionalInfo = [
                 `Device: ${reading.device_id}`,
                 `Relay: ${reading.relay_state}`,
                 `Time: ${new Date(reading.timestamp).toLocaleString()}`
-              ]
+              ];
+
+              // Add temperature and humidity if available
+              if (reading.temperature !== undefined) {
+                additionalInfo.push(`Temp: ${reading.temperature.toFixed(1)}°C`);
+              }
+              if (reading.humidity !== undefined) {
+                additionalInfo.push(`Humidity: ${reading.humidity.toFixed(1)}%`);
+              }
+
+              return additionalInfo;
             }
-            return []
+            return [];
           },
         },
       },
@@ -274,28 +322,97 @@ export default function ChartContainer({ data }: ChartContainerProps) {
         },
         suggestedMin: 0,
       },
+      y1: {
+        type: 'linear' as const,
+        display: true,
+        position: 'right' as const,
+        title: {
+          display: true,
+          text: 'Temp (°C) / Humidity (%)',
+          color: 'white',
+          font: {
+            size: 12,
+            weight: 'bold' as const,
+          },
+        },
+        grid: {
+          drawOnChartArea: false,
+          color: 'rgba(255, 255, 255, 0.1)',
+        },
+        ticks: {
+          color: 'white',
+        },
+        min: 0,
+        max: 100, // For temperature and humidity
+      },
     },
   }
 
   const getStats = () => {
-    if (filteredData.length === 0) return { avg: 0, min: 0, max: 0, trend: 'stable' }
-    
+    if (filteredData.length === 0) return {
+      ppm: { avg: 0, min: 0, max: 0, trend: 'stable' },
+      temp: { avg: null, min: null, max: null, trend: 'stable' },
+      humidity: { avg: null, min: null, max: null, trend: 'stable' }
+    }
+
     const ppmValues = filteredData.map(r => r.ppm)
-    const avg = ppmValues.reduce((a, b) => a + b, 0) / ppmValues.length
-    const min = Math.min(...ppmValues)
-    const max = Math.max(...ppmValues)
-    
-    // Calculate trend
-    const recentValues = ppmValues.slice(-10)
-    const olderValues = ppmValues.slice(-20, -10)
-    const recentAvg = recentValues.reduce((a, b) => a + b, 0) / recentValues.length
-    const olderAvg = olderValues.length > 0 ? olderValues.reduce((a, b) => a + b, 0) / olderValues.length : recentAvg
-    
-    let trend = 'stable'
-    if (recentAvg > olderAvg * 1.1) trend = 'rising'
-    else if (recentAvg < olderAvg * 0.9) trend = 'falling'
-    
-    return { avg, min, max, trend }
+    const tempValues = filteredData.filter(r => r.temperature !== undefined).map(r => r.temperature!)
+    const humidityValues = filteredData.filter(r => r.humidity !== undefined).map(r => r.humidity!)
+
+    // PPM stats
+    const ppmAvg = ppmValues.reduce((a, b) => a + b, 0) / ppmValues.length
+    const ppmMin = Math.min(...ppmValues)
+    const ppmMax = Math.max(...ppmValues)
+
+    // PPM trend
+    const recentPpmValues = ppmValues.slice(-10)
+    const olderPpmValues = ppmValues.slice(-20, -10)
+    const recentPpmAvg = recentPpmValues.reduce((a, b) => a + b, 0) / recentPpmValues.length
+    const olderPpmAvg = olderPpmValues.length > 0 ? olderPpmValues.reduce((a, b) => a + b, 0) / olderPpmValues.length : recentPpmAvg
+
+    let ppmTrend = 'stable'
+    if (recentPpmAvg > olderPpmAvg * 1.1) ppmTrend = 'rising'
+    else if (recentPpmAvg < olderPpmAvg * 0.9) ppmTrend = 'falling'
+
+    // Temperature stats
+    let tempAvg = null, tempMin = null, tempMax = null, tempTrend = 'stable'
+    if (tempValues.length > 0) {
+      tempAvg = tempValues.reduce((a, b) => a + b, 0) / tempValues.length
+      tempMin = Math.min(...tempValues)
+      tempMax = Math.max(...tempValues)
+
+      // Temperature trend
+      const recentTempValues = tempValues.slice(-10)
+      const olderTempValues = tempValues.slice(-20, -10)
+      const recentTempAvg = recentTempValues.length > 0 ? recentTempValues.reduce((a, b) => a + b, 0) / recentTempValues.length : tempAvg!
+      const olderTempAvg = olderTempValues.length > 0 ? olderTempValues.reduce((a, b) => a + b, 0) / olderTempValues.length : recentTempAvg
+
+      if (recentTempAvg > olderTempAvg * 1.01) tempTrend = 'rising'
+      else if (recentTempAvg < olderTempAvg * 0.99) tempTrend = 'falling'
+    }
+
+    // Humidity stats
+    let humidityAvg = null, humidityMin = null, humidityMax = null, humidityTrend = 'stable'
+    if (humidityValues.length > 0) {
+      humidityAvg = humidityValues.reduce((a, b) => a + b, 0) / humidityValues.length
+      humidityMin = Math.min(...humidityValues)
+      humidityMax = Math.max(...humidityValues)
+
+      // Humidity trend
+      const recentHumidityValues = humidityValues.slice(-10)
+      const olderHumidityValues = humidityValues.slice(-20, -10)
+      const recentHumidityAvg = recentHumidityValues.length > 0 ? recentHumidityValues.reduce((a, b) => a + b, 0) / recentHumidityValues.length : humidityAvg!
+      const olderHumidityAvg = olderHumidityValues.length > 0 ? olderHumidityValues.reduce((a, b) => a + b, 0) / olderHumidityValues.length : recentHumidityAvg
+
+      if (recentHumidityAvg > olderHumidityAvg * 1.01) humidityTrend = 'rising'
+      else if (recentHumidityAvg < olderHumidityAvg * 0.99) humidityTrend = 'falling'
+    }
+
+    return {
+      ppm: { avg: ppmAvg, min: ppmMin, max: ppmMax, trend: ppmTrend },
+      temp: { avg: tempAvg, min: tempMin, max: tempMax, trend: tempTrend },
+      humidity: { avg: humidityAvg, min: humidityMin, max: humidityMax, trend: humidityTrend }
+    }
   }
 
   const stats = getStats()
@@ -357,25 +474,25 @@ export default function ChartContainer({ data }: ChartContainerProps) {
       {/* Enhanced Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <div className="text-center p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
-          <div className="text-2xl font-bold text-white">{stats.avg.toFixed(1)}</div>
+          <div className="text-2xl font-bold text-white">{stats.ppm.avg.toFixed(1)}</div>
           <div className="text-xs text-white font-medium">Average PPM</div>
         </div>
         <div className="text-center p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
-          <div className="text-2xl font-bold text-white">{stats.min.toFixed(1)}</div>
+          <div className="text-2xl font-bold text-white">{stats.ppm.min.toFixed(1)}</div>
           <div className="text-xs text-white font-medium">Min PPM</div>
         </div>
         <div className="text-center p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
-          <div className="text-2xl font-bold text-white">{stats.max.toFixed(1)}</div>
+          <div className="text-2xl font-bold text-white">{stats.ppm.max.toFixed(1)}</div>
           <div className="text-xs text-white font-medium">Max PPM</div>
         </div>
         <div className="text-center p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
           <div className={`text-2xl font-bold ${
-            stats.trend === 'rising' ? 'text-red-400' :
-            stats.trend === 'falling' ? 'text-green-400' : 'text-gray-400'
+            stats.ppm.trend === 'rising' ? 'text-red-400' :
+            stats.ppm.trend === 'falling' ? 'text-green-400' : 'text-gray-400'
           }`}>
-            {stats.trend === 'rising' ? '↑' : stats.trend === 'falling' ? '↓' : '→'}
+            {stats.ppm.trend === 'rising' ? '↑' : stats.ppm.trend === 'falling' ? '↓' : '→'}
           </div>
-          <div className="text-xs text-white font-medium">Trend</div>
+          <div className="text-xs text-white font-medium">PPM Trend</div>
         </div>
         {latestReading && (
           <div className="text-center p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
@@ -384,6 +501,87 @@ export default function ChartContainer({ data }: ChartContainerProps) {
           </div>
         )}
       </div>
+
+      {/* Temperature and Humidity Stats (if available) */}
+      {(stats.temp.avg !== null || stats.humidity.avg !== null) && (
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+          {stats.temp.avg !== null && (
+            <div className="text-center p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
+              <div className="text-2xl font-bold text-white">{stats.temp.avg.toFixed(1)}°C</div>
+              <div className="text-xs text-white font-medium">Avg Temperature</div>
+            </div>
+          )}
+          {stats.temp.min !== null && (
+            <div className="text-center p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
+              <div className="text-2xl font-bold text-white">{stats.temp.min.toFixed(1)}°C</div>
+              <div className="text-xs text-white font-medium">Min Temperature</div>
+            </div>
+          )}
+          {stats.temp.max !== null && (
+            <div className="text-center p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
+              <div className="text-2xl font-bold text-white">{stats.temp.max.toFixed(1)}°C</div>
+              <div className="text-xs text-white font-medium">Max Temperature</div>
+            </div>
+          )}
+          {stats.temp.trend && (
+            <div className="text-center p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
+              <div className={`text-2xl font-bold ${
+                stats.temp.trend === 'rising' ? 'text-red-400' :
+                stats.temp.trend === 'falling' ? 'text-green-400' : 'text-gray-400'
+              }`}>
+                {stats.temp.trend === 'rising' ? '↑' : stats.temp.trend === 'falling' ? '↓' : '→'}
+              </div>
+              <div className="text-xs text-white font-medium">Temp Trend</div>
+            </div>
+          )}
+          {latestReading && latestReading.temperature !== undefined && (
+            <div className="text-center p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
+              <div className="text-2xl font-bold text-white">{latestReading.temperature.toFixed(1)}°C</div>
+              <div className="text-xs text-white font-medium">Current Temp</div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {(stats.humidity.avg !== null) && (
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+          {stats.humidity.avg !== null && (
+            <div className="text-center p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
+              <div className="text-2xl font-bold text-white">{stats.humidity.avg.toFixed(1)}%</div>
+              <div className="text-xs text-white font-medium">Avg Humidity</div>
+            </div>
+          )}
+          {stats.humidity.min !== null && (
+            <div className="text-center p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
+              <div className="text-2xl font-bold text-white">{stats.humidity.min.toFixed(1)}%</div>
+              <div className="text-xs text-white font-medium">Min Humidity</div>
+            </div>
+          )}
+          {stats.humidity.max !== null && (
+            <div className="text-center p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
+              <div className="text-2xl font-bold text-white">{stats.humidity.max.toFixed(1)}%</div>
+              <div className="text-xs text-white font-medium">Max Humidity</div>
+            </div>
+          )}
+          {stats.humidity.trend && (
+            <div className="text-center p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
+              <div className={`text-2xl font-bold ${
+                stats.humidity.trend === 'rising' ? 'text-red-400' :
+                stats.humidity.trend === 'falling' ? 'text-green-400' : 'text-gray-400'
+              }`}>
+                {stats.humidity.trend === 'rising' ? '↑' : stats.humidity.trend === 'falling' ? '↓' : '→'}
+              </div>
+              <div className="text-xs text-white font-medium">Humidity Trend</div>
+            </div>
+          )}
+          {latestReading && latestReading.humidity !== undefined && (
+            <div className="text-center p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
+              <div className="text-2xl font-bold text-white">{latestReading.humidity.toFixed(1)}%</div>
+              <div className="text-xs text-white font-medium">Current Humidity</div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Chart */}
       <div className="chart-container" style={{ height: '400px' }}>
