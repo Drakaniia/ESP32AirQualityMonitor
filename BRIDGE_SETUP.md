@@ -1,11 +1,11 @@
-# Air Quality Monitor - MQTT Bridge Setup
+# Combustible Gas Monitor - MQTT Bridge Setup
 
-This project allows you to connect an ESP32 air quality monitor to a web dashboard using MQTT as the communication protocol.
+This project allows you to connect an ESP32 combustible gas monitor to a web dashboard using MQTT as the communication protocol.
 
 ## Architecture
 
 The system consists of:
-1. ESP32 device with MQ-135 sensor
+1. ESP32 device with MQ-2 sensor
 2. MQTT broker (using public broker mqtt://broker.hivemq.com)
 3. MQTT to HTTP bridge (this component)
 4. Web dashboard (Next.js application)

@@ -1,11 +1,11 @@
 # ESP32 Air Quality Monitor
 
-A comprehensive IoT system for real-time air quality monitoring using ESP32, MQ-135 sensor, MQTT communication, and a responsive web dashboard with Firebase Authentication.
+A comprehensive IoT system for real-time combustible gas monitoring using ESP32, MQ-2 sensor, MQTT communication, and a responsive web dashboard with Firebase Authentication.
 
 ## Features
 
 ### ESP32 Device
-- **Real-time Sensing**: MQ-135 air quality sensor with PPM readings
+- **Real-time Sensing**: MQ-2 combustible gas sensor with PPM readings
 - **Local Display**: 0.96" OLED showing current air quality and relay status
 - **MQTT Communication**: Reliable MQTT-based data transmission
 - **WiFi Connectivity**: Reliable WiFi connection with automatic reconnection
@@ -28,7 +28,7 @@ A comprehensive IoT system for real-time air quality monitoring using ESP32, MQ-
 ## System Architecture
 
 ```
-ESP32 (MQ-135 + OLED + Relay)
+ESP32 (MQ-2 + OLED + Relay)
        │ WiFi MQTT
        ▼
 MQTT Broker (broker.hivemq.com)
@@ -47,7 +47,7 @@ Firebase Authentication
 
 ### Components
 - ESP32 Dev Board
-- MQ-135 Gas Sensor
+- MQ-2 Gas Sensor
 - 0.96" OLED Display (I2C, SSD1306)
 - 5V Relay Module (optional)
 - Breadboard and Jumper Wires
@@ -62,14 +62,17 @@ Firebase Authentication
 | OLED | GND | Black | GND | Ground |
 | OLED | SDA | Blue | GPIO21 | I2C Data |
 | OLED | SCL | Yellow | GPIO22 | I2C Clock |
-| **MQ-135 Sensor** |
-| MQ-135 | VCC | Red | 5V | Power Supply |
-| MQ-135 | GND | Black | GND | Ground |
-| MQ-135 | AOUT | Green | GPIO34 | Analog Output |
-| **Relay Module** (optional) |
+| **MQ-2 Sensor** |
+| MQ-2 | VCC | Red | 5V | Power Supply |
+| MQ-2 | GND | Black | GND | Ground |
+| MQ-2 | AOUT | Green | GPIO34 | Analog Output |
+| **Relay Module** (bidirectional control) |
 | Relay | VCC | Red | 5V | Power Supply |
 | Relay | GND | Black | GND | Ground |
-| Relay | IN | Orange | GPIO26 | Control Signal |
+| Relay | IN | Orange | GPIO26 | Control Signal (ESP32 → Relay) |
+| Relay | NO (Normally Open) | Yellow | Device Load | Output (Relay → External Device) |
+| Relay | COM (Common) | Blue | Device Load | Common Terminal |
+| Relay | NC (Normally Closed) | Green | Device Load | Output (Relay → External Device - normally closed) |
 
 ## Quick Start
 
@@ -200,16 +203,16 @@ export DASHBOARD_API_URL=http://localhost:3000
 export BRIDGE_PORT=3002
 ```
 
-## Air Quality Levels
+## Gas Detection Levels
 
-The system categorizes air quality based on PPM readings:
+The system categorizes combustible gas levels based on PPM readings:
 
-- **Excellent**: < 50 PPM
-- **Good**: 50-100 PPM
-- **Moderate**: 100-200 PPM
-- **Poor**: 200-400 PPM
-- **Very Poor**: 400-800 PPM
-- **Hazardous**: > 800 PPM
+- **Excellent**: < 200 PPM (Very low gas concentration)
+- **Good**: 200-500 PPM (Low gas concentration)
+- **Moderate**: 500-1000 PPM (Moderate gas concentration)
+- **Poor**: 1000-2000 PPM (High gas concentration - safety concern)
+- **Very Poor**: 2000-5000 PPM (Very high gas concentration - immediate danger)
+- **Hazardous**: > 5000 PPM (Dangerous gas concentration - emergency)
 
 ## Dashboard Features
 
@@ -316,7 +319,7 @@ BRIDGE_PORT=3002 node mqtt-bridge.js
 - Verify topic subscriptions
 
 ### Device Maintenance
-- Calibrate MQ-135 sensor monthly
+- Calibrate MQ-2 sensor monthly
 - Check wiring connections periodically
 - Update firmware for new features
 - Monitor device online status

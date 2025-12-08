@@ -7,8 +7,8 @@ import VideoBackground from '@/components/VideoBackground'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Air Quality Monitor',
-  description: 'Real-time air quality monitoring dashboard for ESP32 MQ-135 sensor',
+  title: 'Combustible Gas Monitor',
+  description: 'Real-time combustible gas monitoring dashboard for ESP32 MQ-2 sensor',
   manifest: '/manifest.json',
 }
 

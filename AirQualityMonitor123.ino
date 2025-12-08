@@ -6,9 +6,8 @@
 #include <Adafruit_SSD1306.h>
 #include <Wire.h>
 
-// Include our new IoT protocol and other modules
+// Include our configuration and other modules
 #include "src/config.h"
-#include "src/iot_protocol.h"
 
 // Forward declarations for classes
 class WiFiManager;
@@ -111,8 +110,8 @@ void WiFiManager::disconnect() {
 class MQ2Sensor {
 private:
     int sensorPin;
-    float r0;
-    float rl;  // Load resistance in series with sensor (typically 10K)
+    float r0;              // Sensor resistance in clean air
+    float rl;              // Load resistance in series with sensor (typically 10K)
     float ppm;
     float voltage;
     float rs;
@@ -134,9 +133,9 @@ public:
 };
 
 MQ2Sensor::MQ2Sensor() {
-    sensorPin = MQ2_PIN;  // Use MQ2-specific pin
-    r0 = MQ2_R0;          // Default R0 value for MQ2 (will be calibrated)
-    rl = 10.0;            // Load resistance in kΩ (typical value)
+    sensorPin = MQ2_PIN;    // Analog pin for MQ2 sensor
+    r0 = 0.0;              // Will be set during calibration (initially zero)
+    rl = 10.0;             // Load resistance in kΩ (typical value for MQ2)
     ppm = 0;
     voltage = 0;
     rs = 0;
@@ -163,6 +162,7 @@ void MQ2Sensor::init() {
 
 void MQ2Sensor::calibrate() {
     Serial.println("Calibrating MQ-2 sensor in clean air...");
+    Serial.println("Place sensor in clean air for accurate calibration!");
 
     float sum = 0;
     int samples = 100;
@@ -175,17 +175,20 @@ void MQ2Sensor::calibrate() {
     }
 
     float avgAdc = sum / samples;
-    float voltage = (avgAdc / 4095.0) * 3.3;  // ESP32 ADC is 12-bit (0-4095)
+    voltage = (avgAdc / 4095.0) * 3.3;  // ESP32 ADC is 12-bit (0-4095)
 
-    // Calculate RS in clean air
-    float vrl = voltage * rl / 3.3;
-    rs = (3.3 - voltage) / vrl * rl;
+    // Calculate RS in clean air: Rs = ( (Vc - Vrl) / Vrl ) * RL
+    // where Vrl = voltage across the load resistor
+    float vrl = voltage;  // Voltage at the sensor output
+    rs = ((3.3 - voltage) / voltage) * rl;  // Correct formula for MQ2
 
-    // For MQ-2 sensor detecting LPG/Butane, typical R0 value is calculated from RS/correction factor
-    // The Rs/R0 ratio in clean air is typically around 9.8 for LPG (from datasheet curves)
-    r0 = rs / 9.8;  // Typical ratio in clean air for LPG detection
+    // For MQ-2 sensor in clean air (100ppm of H2), typical RS/R0 ratio is around 9.8 for LPG
+    // But for proper calibration we use H2 as reference: RS/R0 = ~1.0 for H2 in clean air
+    // For MQ-2, Rs/R0 is typically ~1 in clean air (different gases have different baseline values)
+    // Using the typical H2 value as baseline for calibration
+    r0 = rs / 1.0;  // For H2 in clean air, RS/R0 ≈ 1.0
 
-    Serial.printf("Calibration complete. R0: %.2f, RS: %.2f\n", r0, rs);
+    Serial.printf("Calibration complete. R0: %.2f, RS: %.2f, Voltage: %.2fV\n", r0, rs, voltage);
 }
 
 float MQ2Sensor::readPPM() {
@@ -198,18 +201,16 @@ float MQ2Sensor::readPPM() {
 }
 
 float MQ2Sensor::calculateResistance() {
-    if (voltage <= 0) {
-        return 0;
+    if (voltage <= 0.01) {  // Prevent division by very small numbers
+        // Calculate voltage from current reading if not cached
+        float currentVoltage = (analogRead(sensorPin) / 4095.0) * 3.3;
+        if (currentVoltage <= 0.01) currentVoltage = 0.01; // Prevent division by zero
+        return ((3.3 - currentVoltage) / currentVoltage) * rl;
     }
 
-    // Calculate voltage across the load resistor
-    float vrl = voltage * rl / 3.3;
-    if (vrl <= 0) {
-        return (3.3 - voltage) / 0.001 * rl;  // Prevent division by zero
-    }
-
-    // Calculate sensor resistance: Rs = (Vcc - Vout) * RL / Vout
-    return (3.3 - voltage) / vrl * rl;
+    // Calculate sensor resistance: Rs = ( (Vc - Vrl) / Vrl ) * RL
+    // where Vrl = voltage across the load resistor (which is the sensor output)
+    return ((3.3 - voltage) / voltage) * rl;
 }
 
 float MQ2Sensor::calculateRatio() {
@@ -222,21 +223,21 @@ float MQ2Sensor::calculateRatio() {
 }
 
 float MQ2Sensor::calculatePPM() {
-    // MQ-2 equation for LPG/Butane detection
-    // Based on datasheet sensitivity curves: log(Rs/Ro) vs. log(C) (concentration)
-    // For LPG, the relationship is approximately: ppm = a * (Rs/Ro)^b
-    // From typical MQ-2 sensitivity chart for LPG/Butane: a = 1000.0, b = -2.182
-    // These values are derived from the log-log relationship in the datasheet
+    // MQ-2 equation for LPG detection (which is the most common use case)
+    // Based on MQ-2 sensitivity curve: log(Rs/R0) vs log(C) is approximately linear
+    // The typical sensitivity characteristic for LPG follows a power law relationship
+    // From MQ-2 datasheet: for LPG, the relationship is approximately: ppm = a * (Rs/R0)^b
+    // For LPG detection: a ≈ 1012.7, b ≈ -2.518 (based on log-log plot from datasheet)
 
     if (ratio <= 0) {
         return 0;
     }
 
-    // For LPG (propane, butane) detection, use the following power law equation
-    // This equation is derived from the typical MQ-2 sensitivity curves
-    float ppm = 987.98 * pow(ratio, -2.182);
+    // For LPG detection using MQ-2 (most common application)
+    // Formula derived from log-log relationship on sensitivity chart
+    float ppm = 1012.7 * pow(ratio, -2.518);
 
-    // Limit the range to reasonable values
+    // Limit the range to reasonable values (MQ-2 can detect from 100-10000ppm typically)
     if (ppm < 0) ppm = 0;
     if (ppm > 10000) ppm = 10000;
 
@@ -244,19 +245,20 @@ float MQ2Sensor::calculatePPM() {
 }
 
 String MQ2Sensor::getAirQuality(float ppm) {
-    // Air quality categories based on LPG/Butane PPM
-    if (ppm < 100) {
-        return "Excellent";
-    } else if (ppm < 200) {
-        return "Good";
+    // Air quality categories based on LPG/Combustible gas detection (MQ-2 primary use)
+    // The MQ-2 is primarily sensitive to LPG, Propane, Hydrogen, etc.
+    if (ppm < 200) {
+        return "Excellent";  // Very low combustible gas concentration
     } else if (ppm < 500) {
-        return "Moderate";
+        return "Good";       // Low levels of combustible gases
     } else if (ppm < 1000) {
-        return "Poor";
+        return "Moderate";   // Moderate levels of combustible gases
     } else if (ppm < 2000) {
-        return "Very Poor";
+        return "Poor";       // High levels, potential safety concern
+    } else if (ppm < 5000) {
+        return "Very Poor";  // Very high levels, immediate concern
     } else {
-        return "Hazardous";
+        return "Hazardous";  // Dangerous levels of combustible gases
     }
 }
 

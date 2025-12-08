@@ -19,7 +19,7 @@
 #define OLED_ADDRESS 0x3C     // I2C address for SSD1306
 
 // MQ-2 Sensor Configuration
-#define MQ2_R0 10.0           // Initial R0 value for MQ-2 sensor (will be calibrated)
+#define MQ2_R0 0.0            // Initial R0 value for MQ-2 sensor (will be calibrated during initialization)
 
 // Timing Configuration
 #define SENSOR_READ_INTERVAL 5000     // Sensor reading interval (ms)
@@ -30,11 +30,11 @@
 #define DEBUG true            // Enable debug output
 #define LED_BUILTIN 2         // Built-in LED pin
 
-// Air Quality Thresholds (PPM)
-#define AQ_THRESHOLD_EXCELLENT 50
-#define AQ_THRESHOLD_GOOD 100
-#define AQ_THRESHOLD_MODERATE 200
-#define AQ_THRESHOLD_POOR 400
-#define AQ_THRESHOLD_VERY_POOR 800
+// Air Quality Thresholds (PPM for MQ-2 combustible gas detection)
+#define AQ_THRESHOLD_EXCELLENT 200    // Very low combustible gas levels
+#define AQ_THRESHOLD_GOOD 500         // Low combustible gas levels
+#define AQ_THRESHOLD_MODERATE 1000    // Moderate combustible gas levels
+#define AQ_THRESHOLD_POOR 2000        // High combustible gas levels - safety concern
+#define AQ_THRESHOLD_VERY_POOR 5000   // Very high combustible gas levels - immediate danger
 
 #endif

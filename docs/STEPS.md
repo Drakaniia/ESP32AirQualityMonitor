@@ -14,7 +14,7 @@ The ESP32 connects to your web dashboard through Firebase services:
 
 ### Hardware Required
 - ESP32 Dev Board
-- MQ-135 Air Quality Sensor
+- MQ-2 Gas Sensor
 - 0.96" OLED Display (I2C SSD1306)
 - 5V Relay Module (optional)
 - Breadboard and Jumper Wires
@@ -43,9 +43,9 @@ SDA         →    GPIO21
 SCL         →    GPIO22
 ```
 
-**MQ-135 Sensor**
+**MQ-2 Sensor**
 ```
-MQ-135 Pin  →    ESP32 Pin
+MQ-2 Pin    →    ESP32 Pin
 VCC         →    5V
 GND         →    GND
 AOUT        →    GPIO34
@@ -272,7 +272,7 @@ When everything is working correctly:
 ## Additional Tips
 
 - Keep ESP32 in well-ventilated area for accurate readings
-- Allow 24-48 hours for MQ-135 sensor to fully stabilize after first use
+- Allow 24-48 hours for MQ-2 sensor to fully stabilize after first use
 - Regularly check dashboard for data accuracy
 - Monitor Firebase usage to avoid unexpected charges
 - Consider securing Firebase rules for production use

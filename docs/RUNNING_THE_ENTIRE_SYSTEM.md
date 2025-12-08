@@ -28,7 +28,7 @@ This comprehensive guide explains how to set up, configure, and run the complete
 
 ### Hardware Prerequisites
 - ESP32 Dev Board
-- MQ-135 Gas Sensor
+- MQ-2 Gas Sensor
 - 0.96" OLED Display (I2C, SSD1306)
 - 5V Relay Module (optional)
 - Breadboard and Jumper Wires
@@ -46,8 +46,8 @@ This comprehensive guide explains how to set up, configure, and run the complete
 | SDA      | GPIO21    | Blue              |
 | SCL      | GPIO22    | Yellow            |
 
-#### MQ-135 Sensor
-| MQ-135 Pin | ESP32 Pin | Color (Suggested) |
+#### MQ-2 Sensor
+| MQ-2 Pin | ESP32 Pin | Color (Suggested) |
 |------------|-----------|-------------------|
 | VCC        | 5V        | Red               |
 | GND        | GND       | Black             |
@@ -128,7 +128,7 @@ Edit `src/config.h` with your specific settings:
 #define DEVICE_ID "esp32_01"  // Unique identifier for your device
 
 // Hardware Pin Configuration
-#define MQ135_PIN 34          // Analog pin for MQ-135 sensor
+#define MQ2_PIN 34            // Analog pin for MQ-2 sensor
 #define RELAY_PIN 26          // Digital pin for relay module (optional)
 #define OLED_SDA 21           // I2C SDA pin for OLED
 #define OLED_SCL 22           // I2C SCL pin for OLED
@@ -319,7 +319,7 @@ For Vercel deployment, follow instructions in `VERCEL_DEPLOYMENT.md`
 - **Check**: Serial monitor for specific error messages
 
 **Problem**: No sensor readings
-- **Solution**: Check MQ-135 wiring, ensure AOUT is connected to GPIO34
+- **Solution**: Check MQ-2 wiring, ensure AOUT is connected to GPIO34
 - **Check**: Sensor needs 24-48 hours to properly calibrate after first power-on
 
 **Problem**: Firebase authentication fails
@@ -371,7 +371,7 @@ Commands → Firebase → ESP32 → Actions
 
 ## Maintenance
 - Regularly monitor Firebase usage (Blaze plan costs)
-- Calibrate MQ-135 sensor monthly in clean air environment
+- Calibrate MQ-2 sensor monthly in clean air environment
 - Update ESP32 firmware as new features are released
 - Backup Firebase data periodically
 

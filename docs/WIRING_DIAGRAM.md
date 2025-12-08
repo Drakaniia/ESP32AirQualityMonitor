@@ -38,7 +38,7 @@
                          ┌──┴──┴──┴──┴──┴──┐
                          │ VCC GND DOUT AOUT│
                          └──────────────────┘
-                           MQ-135 Gas Sensor
+                           MQ-2 Gas Sensor
                           (Analog Air Quality)
 
 
@@ -53,8 +53,8 @@
                     │                 │                 │
               ┌─────┴─────┐     ┌─────┴─────┐     ┌────┴────┐
               │           │     │           │     │         │
-           OLED VCC   (other) Relay VCC  MQ-135  OLED GND Relay GND
-                            │  MQ-135 VCC      │  MQ-135 GND
+           OLED VCC   (other) Relay VCC  MQ-2  OLED GND Relay GND
+                            │  MQ-2 VCC      │  MQ-2 GND
                             │                  │
 ```
 
@@ -67,11 +67,11 @@
 | OLED | GND | Black | GND | Ground |
 | OLED | SDA | Blue | GPIO21 | I2C Data |
 | OLED | SCL | Yellow | GPIO22 | I2C Clock |
-| **MQ-135 Sensor** |
-| MQ-135 | VCC | Red | 5V | Power Supply |
-| MQ-135 | GND | Black | GND | Ground |
-| MQ-135 | AOUT | Green | GPIO34 | Analog Output |
-| MQ-135 | DOUT | (Not Used) | - | Digital Out (Optional) |
+| **MQ-2 Sensor** |
+| MQ-2 | VCC | Red | 5V | Power Supply |
+| MQ-2 | GND | Black | GND | Ground |
+| MQ-2 | AOUT | Green | GPIO34 | Analog Output |
+| MQ-2 | DOUT | (Not Used) | - | Digital Out (Optional) |
 | **Relay Module** |
 | Relay | VCC | Red | 5V | Power Supply |
 | Relay | GND | Black | GND | Ground |
@@ -121,7 +121,7 @@
 **Power Considerations:**
 - ESP32 can be powered via USB (5V) or VIN pin (5-12V)
 - 3.3V rail powers OLED only (low current)
-- 5V rail powers MQ-135 sensor and relay (higher current)
+- 5V rail powers MQ-2 sensor and relay (higher current)
 - Ensure adequate USB power supply (500mA minimum)
 - For production, use external 5V power supply (2A recommended)
 
@@ -131,7 +131,7 @@
 - Pull-up resistors usually integrated on OLED module
 - Keep I2C wires short (< 20cm) for reliability
 
-**Analog Input (MQ-135):**
+**Analog Input (MQ-2):**
 - GPIO34 is ADC1_CH6 (12-bit ADC, 0-4095 range)
 - Sensor requires 24-48h preheat for accurate readings
 - AOUT provides analog voltage proportional to gas concentration

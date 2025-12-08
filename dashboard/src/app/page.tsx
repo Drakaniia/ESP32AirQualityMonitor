@@ -26,10 +26,10 @@ export default function HomePage() {
             </svg>
           </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            Air Quality Monitor
+            Combustible Gas Monitor
           </h1>
           <p className="text-lg text-gray-600 mb-8">
-            Real-time air quality monitoring with ESP32 and MQ-135 sensor
+            Real-time combustible gas monitoring with ESP32 and MQ-2 sensor
           </p>
         </div>
 
@@ -104,8 +104,8 @@ export default function HomePage() {
         </GlassCard>
 
         <div className="mt-8 text-center text-sm text-gray-500">
-          <p>Built with ESP32, MQ-135 sensor, and Firebase</p>
-          <p className="mt-2">© 2025 Air Quality Monitor</p>
+          <p>Built with ESP32, MQ-2 sensor, and Firebase</p>
+          <p className="mt-2">© 2025 Combustible Gas Monitor</p>
         </div>
       </div>
     </div>
