@@ -11,6 +11,14 @@ MQ2Sensor::MQ2Sensor() {
     voltage = 0;
     rs = 0;
     ratio = 0;
+    
+    // Initialize smoothing variables
+    readIndex = 0;
+    total = 0;
+    initialized = false;
+    for (int i = 0; i < 10; i++) {
+        readings[i] = 0;
+    }
 }
 
 void MQ2Sensor::init() {
@@ -53,10 +61,10 @@ void MQ2Sensor::calibrate() {
     float vrl = voltage;  // Voltage at the sensor output
     rs = ((3.3 - voltage) / voltage) * rl;  // Correct formula for MQ2
 
-    // For MQ-2 sensor in clean air, RS/R0 ratio is typically around 1.0 for H2
-    // The baseline can vary depending on the target gas, but using H2 as reference
-    // which gives RS/R0 ≈ 1.0 in clean air
-    r0 = rs / 1.0;  // For H2 in clean air, RS/R0 ≈ 1.0
+    // For MQ-2 sensor in clean air, RS/R0 ratio should be around 1.0
+    // Normal indoor air has virtually no combustible gases (10-50 PPM)
+    // Set R0 so that clean air ratio gives ~10-20 PPM baseline
+    r0 = rs / 1.0;  // Use direct RS as R0 for clean air calibration
 
     Serial.printf("Calibration complete. R0: %.2f, RS: %.2f, Voltage: %.2fV\n", r0, rs, voltage);
 }
@@ -65,7 +73,10 @@ float MQ2Sensor::readPPM() {
     voltage = (analogRead(sensorPin) / 4095.0) * 3.3;
     rs = calculateResistance();
     ratio = calculateRatio();
-    ppm = calculatePPM();
+    float currentPPM = calculatePPM();
+    
+    // Apply smoothing
+    ppm = getSmoothedPPM(currentPPM);
 
     return ppm;
 }
@@ -105,7 +116,16 @@ float MQ2Sensor::calculatePPM() {
 
     // For LPG detection using MQ-2 (most common application)
     // Formula derived from log-log relationship on sensitivity chart
-    float ppm = 1012.7 * pow(ratio, -2.518);
+    // Calibrated for proper baseline: clean air should read 10-20 PPM
+    float ppm = 50.0 * pow(ratio, -2.5);
+
+    // Add recovery logic for when gas is removed
+    // If ratio is close to 1 (clean air), force PPM towards baseline
+    if (ratio > 0.8 && ratio < 1.2) {
+        // In clean air conditions, return to proper baseline
+        float baselinePPM = 15.0; // Normal indoor air baseline (10-20 PPM)
+        ppm = ppm * 0.3 + baselinePPM * 0.7; // Strong weight towards baseline
+    }
 
     // Limit the range to reasonable values (MQ-2 can detect from 100-10000ppm typically)
     if (ppm < 0) ppm = 0;
@@ -117,18 +137,21 @@ float MQ2Sensor::calculatePPM() {
 String MQ2Sensor::getAirQuality(float ppm) {
     // Air quality categories based on LPG/Combustible gas detection (MQ-2 primary use)
     // The MQ-2 is primarily sensitive to LPG, Propane, Hydrogen, etc.
-    if (ppm < 200) {
-        return "Excellent";  // Very low combustible gas concentration
+    // Normal indoor air: 10-50 PPM (virtually no combustible gases)
+    if (ppm < 25) {
+        return "Excellent";  // Clean air (10-25 PPM)
+    } else if (ppm < 50) {
+        return "Good";       // Normal indoor air (25-50 PPM)
+    } else if (ppm < 200) {
+        return "Moderate";   // Light cooking/activity (50-200 PPM)
     } else if (ppm < 500) {
-        return "Good";       // Low levels of combustible gases
+        return "Poor";       // Elevated levels - investigate (200-500 PPM)
     } else if (ppm < 1000) {
-        return "Moderate";   // Moderate levels of combustible gases
-    } else if (ppm < 2000) {
-        return "Poor";       // High levels, potential safety concern
+        return "Very Poor";  // High levels - potential concern (500-1000 PPM)
     } else if (ppm < 5000) {
-        return "Very Poor";  // Very high levels, immediate concern
+        return "Hazardous";  // Dangerous levels - immediate action (1000-5000 PPM)
     } else {
-        return "Hazardous";  // Dangerous levels of combustible gases
+        return "Critical";   // Extreme danger - evacuate immediately (>5000 PPM)
     }
 }
 
@@ -138,6 +161,44 @@ float MQ2Sensor::getVoltage() {
 
 float MQ2Sensor::getResistance() {
     return rs;
+}
+
+float MQ2Sensor::getSmoothedPPM(float currentPPM) {
+    // Subtract the last reading
+    total = total - readings[readIndex];
+    
+    // Read from the sensor
+    readings[readIndex] = currentPPM;
+    
+    // Add the reading to the total
+    total = total + readings[readIndex];
+    
+    // Advance to the next position in the array
+    readIndex = readIndex + 1;
+    
+    // If we're at the end of the array, wrap around to the beginning
+    if (readIndex >= 10) {
+        readIndex = 0;
+        initialized = true;
+    }
+    
+    // Calculate the average with adaptive smoothing
+    if (initialized) {
+        float average = total / 10.0;
+        
+        // If current reading is significantly different from average, use less smoothing
+        float difference = abs(currentPPM - average);
+        if (difference > average * 0.3) { // If difference is more than 30% of average
+            // Use weighted average that favors current reading more
+            return (average * 0.3) + (currentPPM * 0.7);
+        } else {
+            // Use normal smoothing
+            return average;
+        }
+    } else {
+        // Return current reading if not enough samples yet
+        return currentPPM;
+    }
 }
 
 bool MQ2Sensor::isCalibrated() {

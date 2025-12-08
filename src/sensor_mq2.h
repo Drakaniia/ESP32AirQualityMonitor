@@ -13,10 +13,17 @@ private:
     float voltage;     // Current voltage reading
     float rs;          // Sensor resistance
     float ratio;       // RS/R0 ratio
+    
+    // Smoothing variables
+    float readings[10]; // Array to store last 10 readings
+    int readIndex;      // Current index in array
+    float total;        // Running total
+    bool initialized;   // Whether smoothing array is initialized
 
     float calculateResistance();
     float calculateRatio();
     float calculatePPM();
+    float getSmoothedPPM();
     void calibrate();
 
 public:
@@ -27,6 +34,7 @@ public:
     float getVoltage();
     float getResistance();
     bool isCalibrated();
+    float getSmoothedPPM(float currentPPM);
 };
 
 #endif

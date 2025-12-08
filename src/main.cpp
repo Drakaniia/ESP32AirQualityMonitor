@@ -10,6 +10,7 @@
 #include "sensor_mq2.h"
 #include "oled_display.h"
 #include "relay_controller.h"
+#include "alert_controller.h"
 
 // Global objects
 WiFiManager wifiManager;
@@ -17,6 +18,7 @@ IoTProtocol iotProtocol;
 MQ2Sensor sensor;
 OLEDDisplay display;
 RelayController relay;
+AlertController alert;
 
 // Global variables
 unsigned long lastSensorRead = 0;
@@ -38,6 +40,11 @@ void setup() {
     display.showWelcome();
     
     relay.init();
+    alert.init(&relay);
+    
+    // Initialize relay to ON state (normal operation - buzzer and LED powered)
+    relay.turnOn();
+    relayState = true;
     
     sensor.init();
     
@@ -80,6 +87,12 @@ void loop() {
         currentQuality = sensor.getAirQuality(currentPPM);
 
         Serial.printf("PPM: %.2f, Quality: %s\n", currentPPM, currentQuality.c_str());
+        
+        // Check PPM level and control alerts
+        alert.checkPPMLevel(currentPPM);
+        
+        // Update alert state (LED and buzzer)
+        alert.update();
 
         // Update display
         if (customMessage.length() > 0) {
@@ -129,7 +142,20 @@ void processCommands(String commandsJson) {
         return;
     }
 
-    // Process relay command
+    // Process buzzer/LED manual override command
+    if (doc.containsKey("buzzer_override")) {
+        bool override = doc["buzzer_override"];
+        bool state = doc["buzzer_state"];
+        alert.setManualOverride(override, state);
+        Serial.printf("Buzzer/LED override: %s, State: %s\n", override ? "ON" : "OFF", state ? "ON" : "OFF");
+    }
+    
+    // Clear manual override when using normal toggle (no override flag)
+    if (doc.containsKey("clear_override") && doc["clear_override"]) {
+        alert.clearManualOverride();
+    }
+
+    // Process relay command (for backward compatibility)
     if (doc.containsKey("relay_state")) {
         String newRelayState = doc["relay_state"];
         bool newState = (newRelayState == "ON");
@@ -137,6 +163,12 @@ void processCommands(String commandsJson) {
             relayState = newState;
             relay.setState(relayState);
             Serial.printf("Relay state changed to: %s\n", relayState ? "ON" : "OFF");
+            
+            // Update OLED display immediately to show relay state change
+            display.showAirQuality(currentPPM, currentQuality, relayState);
+            
+            // Note: Relay should remain ON at all times to power LED/buzzer
+            // Dashboard commands should control buzzer/LED directly, not the relay
         }
     }
 

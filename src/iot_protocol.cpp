@@ -86,6 +86,7 @@ bool IoTProtocol::connect() {
             if (!mqttClient.connected()) {
                 String clientId = "ESP32Client-" + String(random(0xffff), HEX);
                 
+                // Add username/password if needed
                 if (mqttClient.connect(clientId.c_str())) {
                     Serial.println("MQTT Connected");
                     // Subscribe to command topic
@@ -149,7 +150,7 @@ bool IoTProtocol::publishSensorData(float ppm, String quality, bool relayState) 
             
         case COMM_PROTOCOL_HTTP:
             {
-                httpClient.begin("http://your-http-endpoint.com/api/sensor-data");
+                httpClient.begin("http://192.168.1.100:3000/api/sensor-data");
                 httpClient.addHeader("Content-Type", "application/json");
                 
                 int httpResponseCode = httpClient.POST(jsonString);
@@ -191,7 +192,7 @@ bool IoTProtocol::updateDeviceStatus(bool online) {
             
         case COMM_PROTOCOL_HTTP:
             {
-                httpClient.begin("http://your-http-endpoint.com/api/device-status");
+                httpClient.begin("http://192.168.1.100:3000/api/sensor-data");
                 httpClient.addHeader("Content-Type", "application/json");
                 
                 int httpResponseCode = httpClient.PUT(jsonString);
@@ -235,7 +236,7 @@ String IoTProtocol::receiveCommand() {
             {
                 // HTTP is not ideal for receiving commands in real-time
                 // Would need to poll for commands
-                httpClient.begin("http://your-http-endpoint.com/api/device-commands/esp32_01");
+                httpClient.begin("http://192.168.1.100:3000/api/device-commands/esp32_01");
                 int httpResponseCode = httpClient.GET();
                 
                 if (httpResponseCode > 0) {
@@ -271,8 +272,14 @@ void IoTProtocol::loop() {
             if (mqttClient.connected()) {
                 mqttClient.loop();
             } else {
-                // Try to reconnect
-                connect();
+                // Try to reconnect with delay
+                static unsigned long lastReconnectAttempt = 0;
+                if (millis() - lastReconnectAttempt > 5000) { // Try to reconnect every 5 seconds
+                    lastReconnectAttempt = millis();
+                    if (connect()) {
+                        lastReconnectAttempt = 0;
+                    }
+                }
             }
             break;
             

@@ -7,21 +7,7 @@
 #include <WebSocketsClient.h>  // For WebSocket
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
-
-// Communication Protocol Options
-#define COMM_PROTOCOL_MQTT 0
-#define COMM_PROTOCOL_WEBSOCKET 1
-#define COMM_PROTOCOL_HTTP 2
-
-// Select your preferred communication protocol
-#define COMM_PROTOCOL COMM_PROTOCOL_MQTT  // Recommended for IoT
-
-// MQTT Configuration
-#define MQTT_SERVER "broker.hivemq.com"  // Public MQTT broker
-#define MQTT_PORT 1883
-#define MQTT_DEVICE_TOPIC "airquality/esp32_01/sensor"
-#define MQTT_COMMAND_TOPIC "airquality/esp32_01/command"
-#define MQTT_STATUS_TOPIC "airquality/esp32_01/status"
+#include "config.h"
 
 // WebSocket Configuration
 #define WS_SERVER_URL "ws://your-websocket-server.com"

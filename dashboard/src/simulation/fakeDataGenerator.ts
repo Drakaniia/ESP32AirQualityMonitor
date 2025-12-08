@@ -26,19 +26,19 @@ export class FakeDataGenerator {
 
   constructor(deviceId: string = 'ESP32_SIM_01') {
     this.deviceId = deviceId
-    this.currentPPM = 200 // Start in normal range
+    this.currentPPM = 25 // Start in normal range (10-50 PPM)
     this.trend = 'stable'
     this.lastChangeTime = Date.now()
     this.alertHistory = []
   }
 
   private getQualityFromPPM(ppm: number): string {
-    if (ppm < 50) return 'Excellent'
-    if (ppm < 100) return 'Good'
-    if (ppm < 200) return 'Moderate'
-    if (ppm < 350) return 'Poor'
-    if (ppm < 500) return 'Very Poor'
-    return 'Hazardous'
+    if (ppm < 25) return 'Excellent'  // Clean air (10-25 PPM)
+    if (ppm < 50) return 'Good'       // Normal indoor air (25-50 PPM)
+    if (ppm < 200) return 'Moderate'  // Light cooking/activity (50-200 PPM)
+    if (ppm < 500) return 'Poor'       // Elevated levels (200-500 PPM)
+    if (ppm < 1000) return 'Very Poor'  // High levels (500-1000 PPM)
+    return 'Hazardous'  // Dangerous levels (>1000 PPM)
   }
 
   private getSeverityFromQuality(quality: string): 'low' | 'medium' | 'high' | 'critical' {
@@ -88,12 +88,12 @@ export class FakeDataGenerator {
     let newPPM = this.currentPPM + change
 
     // Keep within realistic bounds
-    newPPM = Math.max(20, Math.min(1200, newPPM))
+    newPPM = Math.max(10, Math.min(2000, newPPM))
 
     // Occasionally create spikes
     if (Math.random() < 0.05) { // 5% chance of spike
-      newPPM += Math.random() > 0.5 ? 200 : -100
-      newPPM = Math.max(20, Math.min(1200, newPPM))
+      newPPM += Math.random() > 0.5 ? 300 : -50
+      newPPM = Math.max(10, Math.min(2000, newPPM))
     }
 
     this.currentPPM = newPPM
@@ -173,19 +173,19 @@ export class FakeDataGenerator {
   setScenario(scenario: 'normal' | 'warning' | 'critical' | 'recovery'): void {
     switch (scenario) {
       case 'normal':
-        this.currentPPM = 150 + Math.random() * 100 // 150-250
+        this.currentPPM = 10 + Math.random() * 40 // 10-50 PPM (normal indoor air)
         this.trend = 'stable'
         break
       case 'warning':
-        this.currentPPM = 300 + Math.random() * 200 // 300-500
+        this.currentPPM = 200 + Math.random() * 300 // 200-500 PPM (elevated levels)
         this.trend = Math.random() > 0.5 ? 'rising' : 'stable'
         break
       case 'critical':
-        this.currentPPM = 600 + Math.random() * 400 // 600-1000
+        this.currentPPM = 1000 + Math.random() * 500 // 1000-1500 PPM (dangerous levels)
         this.trend = Math.random() > 0.3 ? 'rising' : 'stable'
         break
       case 'recovery':
-        this.currentPPM = Math.max(100, this.currentPPM - 200)
+        this.currentPPM = Math.max(15, this.currentPPM - 300)
         this.trend = 'falling'
         break
     }

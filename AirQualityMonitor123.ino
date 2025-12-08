@@ -5,6 +5,8 @@
 #include <ArduinoJson.h>
 #include <Adafruit_SSD1306.h>
 #include <Wire.h>
+#include <PubSubClient.h>
+#include <WebSocketsClient.h>
 
 // Include our configuration and other modules
 #include "src/config.h"
@@ -15,6 +17,7 @@ class IoTProtocol;
 class MQ2Sensor;
 class OLEDDisplay;
 class RelayController;
+class AlarmController;
 
 // WiFi Manager class
 class WiFiManager {
@@ -390,6 +393,144 @@ unsigned long RelayController::getLastToggleTime() {
     return lastToggleTime;
 }
 
+// Alarm Controller class for LED and Buzzer
+class AlarmController {
+private:
+    int ledPin;
+    int buzzerPin;
+    bool ledState;
+    bool buzzerState;
+    bool alarmActive;
+    bool isInitialized;
+    unsigned long lastBlinkTime;
+    unsigned long blinkInterval; // 500ms for blinking
+    unsigned long lastBeepTime;
+    unsigned long beepInterval;  // 500ms for beeping
+
+public:
+    AlarmController();
+    bool init();
+    void setAlarmState(bool state);
+    bool getAlarmState();
+    void update(); // Call this in main loop for blinking/beeping
+    void setLedState(bool state);
+    void setBuzzerState(bool state);
+    bool getLedState();
+    bool getBuzzerState();
+    void enableAlarm();
+    void disableAlarm();
+    bool isAlarmEnabled();
+};
+
+AlarmController::AlarmController() {
+    ledPin = LED_PIN;
+    buzzerPin = BUZZER_PIN;
+    ledState = false;
+    buzzerState = false;
+    alarmActive = false;
+    isInitialized = false;
+    lastBlinkTime = 0;
+    blinkInterval = 500; // 500ms blink interval
+    lastBeepTime = 0;
+    beepInterval = 500; // 500ms beep interval
+}
+
+bool AlarmController::init() {
+    pinMode(ledPin, OUTPUT);
+    pinMode(buzzerPin, OUTPUT);
+
+    // Initialize to OFF state
+    digitalWrite(ledPin, LOW);
+    digitalWrite(buzzerPin, LOW);
+
+    ledState = false;
+    buzzerState = false;
+    alarmActive = false;
+    isInitialized = true;
+
+    Serial.println("Alarm controller initialized");
+    return true;
+}
+
+void AlarmController::setAlarmState(bool state) {
+    if (!isInitialized) {
+        Serial.println("Alarm controller not initialized");
+        return;
+    }
+
+    alarmActive = state;
+
+    if (!alarmActive) {
+        // Turn off both LED and buzzer when alarm is disabled
+        setLedState(false);
+        setBuzzerState(false);
+    } else {
+        // When enabling, start with LED on and buzzer on initially
+        setLedState(true);
+        setBuzzerState(true);
+    }
+}
+
+bool AlarmController::getAlarmState() {
+    return alarmActive;
+}
+
+void AlarmController::update() {
+    if (!isInitialized || !alarmActive) {
+        return;
+    }
+
+    unsigned long currentTime = millis();
+
+    // Handle LED blinking
+    if (currentTime - lastBlinkTime >= blinkInterval) {
+        ledState = !ledState; // Toggle LED state
+        digitalWrite(ledPin, ledState ? HIGH : LOW);
+        lastBlinkTime = currentTime;
+    }
+
+    // Handle buzzer beeping (50% duty cycle - on for 250ms, off for 250ms)
+    if (currentTime - lastBeepTime >= beepInterval) {
+        buzzerState = !buzzerState; // Toggle buzzer state
+        digitalWrite(buzzerPin, buzzerState ? HIGH : LOW);
+        lastBeepTime = currentTime;
+    }
+}
+
+void AlarmController::setLedState(bool state) {
+    if (!isInitialized) return;
+
+    ledState = state;
+    digitalWrite(ledPin, ledState ? HIGH : LOW);
+}
+
+void AlarmController::setBuzzerState(bool state) {
+    if (!isInitialized) return;
+
+    buzzerState = state;
+    digitalWrite(buzzerPin, buzzerState ? HIGH : LOW);
+}
+
+bool AlarmController::getLedState() {
+    return ledState;
+}
+
+bool AlarmController::getBuzzerState() {
+    return buzzerState;
+}
+
+void AlarmController::enableAlarm() {
+    setAlarmState(true);
+}
+
+void AlarmController::disableAlarm() {
+    setAlarmState(false);
+}
+
+bool AlarmController::isAlarmEnabled() {
+    return alarmActive;
+}
+
 // OLED Display class
 class OLEDDisplay {
 private:
@@ -500,7 +641,13 @@ void OLEDDisplay::showAirQuality(float ppm, String quality, bool relayState) {
     // Relay Status
     display.setCursor(10, 52);
     display.print("Relay: ");
-    display.println(relayState ? "ON" : "OFF");
+    display.print(relayState ? "ON" : "OFF");
+
+    // Add alarm status indicator
+    bool alarmStatus = alarm.getAlarmState();
+    if (alarmStatus) {
+        display.print(" ALARM!");
+    }
 
     // Status indicator
     display.drawCircle(120, 8, 3, SSD1306_WHITE);
@@ -591,7 +738,13 @@ void OLEDDisplay::showSensorData(float ppm, float voltage, float resistance) {
     display.println("kΩ");
 
     display.setCursor(0, 48);
-    display.println("System Running");
+    display.print("System Running");
+
+    // Add alarm status
+    bool alarmStatus = alarm.getAlarmState();
+    if (alarmStatus) {
+        display.print(" ALARM!");
+    }
 
     display.display();
 }
@@ -726,6 +879,7 @@ bool IoTProtocol::sendSensorData(float ppm, String quality, bool relayState) {
     doc["ppm"] = ppm;
     doc["quality"] = quality;
     doc["relay_state"] = relayState ? "ON" : "OFF";
+    doc["alarm_state"] = alarm.getAlarmState() ? "ACTIVE" : "INACTIVE";
     doc["timestamp"] = getCurrentTimestamp();
 
     String jsonString;
@@ -809,6 +963,7 @@ String IoTProtocol::createSensorData(float ppm, String quality, bool relayState)
     doc["ppm"] = ppm;
     doc["quality"] = quality;
     doc["relay_state"] = relayState ? "ON" : "OFF";
+    doc["alarm_state"] = alarm.getAlarmState() ? "ACTIVE" : "INACTIVE";
     doc["timestamp"] = getCurrentTimestamp();
 
     String output;
@@ -861,6 +1016,7 @@ IoTProtocol iotProtocol;
 MQ2Sensor sensor;
 OLEDDisplay display;
 RelayController relay;
+AlarmController alarm;
 
 // Global variables
 unsigned long lastSensorRead = 0;
@@ -870,6 +1026,7 @@ unsigned long customMessageTime = 0;
 float currentPPM = 0;
 String currentQuality = "";
 bool relayState = false;
+bool alarmState = false;  // Track alarm state separately
 int samplingInterval = 5; // seconds
 String customMessage = "";
 
@@ -882,6 +1039,7 @@ void setup() {
     display.showWelcome();
 
     relay.init();
+    alarm.init();
 
     sensor.init();
 
@@ -932,6 +1090,28 @@ void loop() {
 
         Serial.printf("PPM: %.2f, Quality: %s\n", currentPPM, currentQuality.c_str());
 
+        // Check if PPM has reached dangerous level (1000) to activate alarm
+        if (currentPPM >= 1000 && !alarmState) {
+            // Activate alarm if PPM reaches 1000 and it's not already active
+            alarmState = true;
+            alarm.enableAlarm();
+            Serial.println("ALARM ACTIVATED: PPM reached dangerous level!");
+        } else if (currentPPM < 500 && alarmState) {
+            // Deactivate alarm when PPM returns to normal levels
+            // Using 500 as the return threshold to avoid oscillation around the threshold
+            alarmState = false;
+            alarm.disableAlarm();
+            Serial.println("ALARM DEACTIVATED: PPM returned to normal levels");
+        }
+
+        // If relay is turned OFF by external command, also turn off alarm
+        if (!relayState && alarmState) {
+            // When relay is turned off, also turn off the alarm
+            alarmState = false;
+            alarm.disableAlarm();
+            Serial.println("ALARM DEACTIVATED: Relay turned OFF");
+        }
+
         // Update display (only if no custom message is active)
         if (customMessage.length() > 0) {
             // Message is already displayed, but we can refresh it if needed
@@ -961,6 +1141,9 @@ void loop() {
 
     // Call loop for IoT protocol (needed for MQTT command handling)
     iotProtocol.loop();
+
+    // Update alarm state (handles LED blinking and buzzer beeping)
+    alarm.update();
 
     delay(100);
 }
@@ -1092,6 +1275,13 @@ void processCommands(String commandsJson) {
             relayState = newState;
             relay.setState(relayState);
             Serial.printf("Relay state changed to: %s\n", relayState ? "ON" : "OFF");
+
+            // If the relay is turned OFF, also turn off the alarm
+            if (!relayState && alarmState) {
+                alarmState = false;
+                alarm.disableAlarm();
+                Serial.println("ALARM DEACTIVATED: Relay turned OFF via command");
+            }
         }
     }
 

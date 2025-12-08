@@ -302,6 +302,7 @@ function DashboardContent() {
               <div>
                 <ControlPanel 
                   currentCommands={displayCommands}
+                  currentPPM={displayReading?.ppm}
                   onCommandUpdate={async (commands) => {
                     try {
                       console.log('Updating commands:', commands)

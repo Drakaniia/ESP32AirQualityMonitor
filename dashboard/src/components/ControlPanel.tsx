@@ -14,17 +14,20 @@ interface DeviceCommand {
 interface ControlPanelProps {
   currentCommands: DeviceCommand | null
   onCommandUpdate: (commands: Partial<DeviceCommand>) => void
+  currentPPM?: number
 }
 
-export default function ControlPanel({ currentCommands, onCommandUpdate }: ControlPanelProps) {
+export default function ControlPanel({ currentCommands, onCommandUpdate, currentPPM }: ControlPanelProps) {
   const { isSimulationMode, startSimulation, stopSimulation, setSimulationScenario, updateSimulationCommand } = useSimulationContext()
-  const [relayState, setRelayState] = useState(currentCommands?.relay_state || 'OFF')
+  const [buzzerState, setBuzzerState] = useState(currentCommands?.relay_state || 'ON')
+  const [emergencySilence, setEmergencySilence] = useState(false)
   const [samplingInterval, setSamplingInterval] = useState(currentCommands?.sampling_interval || 5)
   const [oledMessage, setOledMessage] = useState(currentCommands?.oled_message || '')
 
-  const handleRelayToggle = async () => {
-    const newState = relayState === 'ON' ? 'OFF' : 'ON'
-    setRelayState(newState)
+  const handleBuzzerToggle = async () => {
+    const newState = buzzerState === 'ON' ? 'OFF' : 'ON'
+    setBuzzerState(newState)
+    setEmergencySilence(false) // Reset emergency silence when using toggle
 
     if (isSimulationMode) {
       updateSimulationCommand({ relay_state: newState, last_update: Date.now() })
@@ -36,7 +39,10 @@ export default function ControlPanel({ currentCommands, onCommandUpdate }: Contr
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            relay_state: newState,
+            buzzer_override: true,
+            buzzer_state: newState === 'ON',
+            clear_override: true, // Clear any existing emergency override
+            relay_state: 'ON', // Keep relay ON for power
             sampling_interval: samplingInterval,
             oled_message: oledMessage,
             last_update: Date.now()
@@ -49,7 +55,7 @@ export default function ControlPanel({ currentCommands, onCommandUpdate }: Contr
 
         onCommandUpdate({ relay_state: newState, last_update: Date.now() });
       } catch (error) {
-        console.error('Error sending relay command:', error);
+        console.error('Error sending buzzer command:', error);
       }
     }
   }
@@ -67,7 +73,7 @@ export default function ControlPanel({ currentCommands, onCommandUpdate }: Contr
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            relay_state: relayState,
+            relay_state: buzzerState,
             sampling_interval: newInterval,
             oled_message: oledMessage,
             last_update: Date.now()
@@ -96,7 +102,7 @@ export default function ControlPanel({ currentCommands, onCommandUpdate }: Contr
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            relay_state: relayState,
+            relay_state: buzzerState,
             sampling_interval: samplingInterval,
             oled_message: oledMessage,
             last_update: Date.now()
@@ -162,19 +168,19 @@ export default function ControlPanel({ currentCommands, onCommandUpdate }: Contr
               onClick={() => setSimulationScenario('normal')}
               className="px-3 py-2 bg-green-100 text-green-800 text-xs font-medium rounded hover:bg-green-200 transition-colors"
             >
-              Normal (150-250 PPM)
+              Normal (10-50 PPM)
             </button>
             <button
               onClick={() => setSimulationScenario('warning')}
               className="px-3 py-2 bg-yellow-100 text-yellow-800 text-xs font-medium rounded hover:bg-yellow-200 transition-colors"
             >
-              Warning (300-500 PPM)
+              Warning (200-500 PPM)
             </button>
             <button
               onClick={() => setSimulationScenario('critical')}
               className="px-3 py-2 bg-red-100 text-red-800 text-xs font-medium rounded hover:bg-red-200 transition-colors"
             >
-              Critical (600-1000 PPM)
+              Critical (1000+ PPM)
             </button>
             <button
               onClick={() => setSimulationScenario('recovery')}
@@ -187,26 +193,77 @@ export default function ControlPanel({ currentCommands, onCommandUpdate }: Contr
       )}
 
       <div className="space-y-6">
-        {/* Relay Control */}
+        {/* Buzzer Control */}
         <div>
           <label className="block text-sm font-medium text-white mb-3">
-            Relay Control
+            Buzzer & LED Control
           </label>
-          <button
-            onClick={handleRelayToggle}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              relayState === 'ON' ? 'bg-green-600' : 'bg-gray-200'
-            }`}
-          >
-            <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                relayState === 'ON' ? 'translate-x-6' : 'translate-x-1'
+          <div className="flex items-center space-x-3 mb-3">
+            <button
+              onClick={handleBuzzerToggle}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                buzzerState === 'ON' ? 'bg-green-600' : 'bg-gray-200'
               }`}
-            />
-          </button>
-          <span className="ml-3 text-sm text-white">
-            Relay is {relayState === 'ON' ? 'ON' : 'OFF'}
-          </span>
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  buzzerState === 'ON' ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+            <span className="text-sm text-white">
+              Buzzer is {buzzerState === 'ON' ? 'ON' : 'OFF'}
+              {emergencySilence && <span className="ml-2 text-yellow-300">(Silenced)</span>}
+            </span>
+          </div>
+          
+          {/* Emergency Buzzer & LED Off Button - Only show when PPM > 1000 */}
+          {currentPPM && currentPPM > 1000 && (
+            <div className="mt-3 p-3 bg-red-500/20 border border-red-500/50 rounded-lg">
+              <p className="text-xs text-red-200 mb-2 font-medium">
+                🚨 High PPM Detected ({currentPPM.toFixed(1)}) - Buzzer & LED Activated
+              </p>
+               <button
+                 onClick={async () => {
+                   setEmergencySilence(true)
+                   if (isSimulationMode) {
+                     updateSimulationCommand({ relay_state: 'OFF', last_update: Date.now() })
+                   } else {
+                     try {
+                       const response = await fetch('http://localhost:3001/api/send-command/esp32_01', {
+                         method: 'POST',
+                         headers: {
+                           'Content-Type': 'application/json',
+                         },
+                         body: JSON.stringify({
+                           buzzer_override: true,
+                           buzzer_state: false,
+                           relay_state: 'ON', // Keep relay ON for power
+                           sampling_interval: samplingInterval,
+                           oled_message: 'Buzzer & LED silenced',
+                           last_update: Date.now()
+                         })
+                       });
+
+                       if (!response.ok) {
+                         throw new Error(`HTTP error! status: ${response.status}`);
+                       }
+
+                       onCommandUpdate({ relay_state: 'OFF', last_update: Date.now() });
+                     } catch (error) {
+                       console.error('Error sending emergency buzzer & LED off command:', error);
+                     }
+                   }
+                 }}
+                 className="w-full px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+               >
+                 🔇 Turn Off Buzzer & LED
+               </button>
+              <p className="text-xs text-red-100 mt-2">
+                Manually deactivate the buzzer and LED when PPM exceeds 1000
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Sampling Interval */}
@@ -260,7 +317,7 @@ export default function ControlPanel({ currentCommands, onCommandUpdate }: Contr
                         'Content-Type': 'application/json',
                       },
                       body: JSON.stringify({
-                        relay_state: relayState,
+                        relay_state: buzzerState,
                         sampling_interval: samplingInterval,
                         oled_message: 'CLEAR',
                         last_update: Date.now()
@@ -301,7 +358,7 @@ export default function ControlPanel({ currentCommands, onCommandUpdate }: Contr
                       'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                      relay_state: relayState,
+                      relay_state: buzzerState,
                       sampling_interval: samplingInterval,
                       oled_message: 'Air Quality OK',
                       last_update: Date.now()
@@ -331,7 +388,7 @@ export default function ControlPanel({ currentCommands, onCommandUpdate }: Contr
                       'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                      relay_state: relayState,
+                      relay_state: buzzerState,
                       sampling_interval: samplingInterval,
                       oled_message: 'Warning!',
                       last_update: Date.now()
@@ -353,11 +410,11 @@ export default function ControlPanel({ currentCommands, onCommandUpdate }: Contr
             </button>
             <button
               onClick={() => {
-                handleRelayToggle()
+                handleBuzzerToggle()
               }}
               className="px-3 py-2 bg-white/20 backdrop-blur-sm text-white text-xs font-medium rounded hover:bg-white/30 border border-white/30"
             >
-              Toggle Relay
+              Toggle Buzzer
             </button>
             <button
               onClick={() => {

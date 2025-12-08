@@ -9,7 +9,9 @@
 
 // Hardware Pin Configuration
 #define MQ2_PIN 34            // Analog pin for MQ-2 sensor
-#define RELAY_PIN 26          // Digital pin for relay module
+#define RELAY_PIN 26          // Digital pin for relay module (controls power to buzzer and LED)
+#define LED_PIN 25            // Digital pin for LED
+#define BUZZER_PIN 27         // Digital pin for buzzer
 #define OLED_SDA 21           // I2C SDA pin for OLED
 #define OLED_SCL 22           // I2C SCL pin for OLED
 
@@ -30,11 +32,28 @@
 #define DEBUG true            // Enable debug output
 #define LED_BUILTIN 2         // Built-in LED pin
 
+// Communication Protocol Configuration
+#define COMM_PROTOCOL_MQTT 1
+#define COMM_PROTOCOL_WEBSOCKET 2
+#define COMM_PROTOCOL_HTTP 3
+#define COMM_PROTOCOL COMM_PROTOCOL_MQTT    // Default communication protocol
+
+// MQTT Configuration
+#define MQTT_SERVER "broker.hivemq.com"  // Public MQTT broker
+#define MQTT_PORT 1883
+#define MQTT_DEVICE_TOPIC "airquality/esp32_01/sensor"
+#define MQTT_STATUS_TOPIC "airquality/esp32_01/status"
+#define MQTT_COMMAND_TOPIC "airquality/esp32_01/command"
+
+// WebSocket Configuration
+#define WS_PORT 8080
+
 // Air Quality Thresholds (PPM for MQ-2 combustible gas detection)
-#define AQ_THRESHOLD_EXCELLENT 200    // Very low combustible gas levels
-#define AQ_THRESHOLD_GOOD 500         // Low combustible gas levels
-#define AQ_THRESHOLD_MODERATE 1000    // Moderate combustible gas levels
-#define AQ_THRESHOLD_POOR 2000        // High combustible gas levels - safety concern
-#define AQ_THRESHOLD_VERY_POOR 5000   // Very high combustible gas levels - immediate danger
+#define AQ_THRESHOLD_EXCELLENT 50     // Background levels
+#define AQ_THRESHOLD_GOOD 200          // Normal indoor air
+#define AQ_THRESHOLD_MODERATE 500     // After cooking/light activity
+#define AQ_THRESHOLD_POOR 1000        // Elevated levels - investigate
+#define AQ_THRESHOLD_VERY_POOR 2000    // High levels - potential concern
+#define AQ_THRESHOLD_HAZARDOUS 5000    // Dangerous levels - immediate action
 
 #endif
