@@ -82,7 +82,7 @@ async function startCommandListener() {
     // Set up a simple HTTP server to receive commands from the dashboard
     const express = require('express');
     const app = express();
-    const port = process.env.BRIDGE_PORT || 3001;
+    const port = process.env.BRIDGE_PORT || 4001;
 
     app.use(express.json());
 

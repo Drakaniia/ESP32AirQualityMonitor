@@ -7,6 +7,7 @@
 #include <Wire.h>
 #include <PubSubClient.h>
 #include <WebSocketsClient.h>
+#include "DHT.h"
 
 // Include our configuration and other modules
 #include "src/config.h"
@@ -18,6 +19,7 @@ class MQ2Sensor;
 class OLEDDisplay;
 class RelayController;
 class AlarmController;
+class DHTSensor;
 
 // WiFi Manager class
 class WiFiManager {
@@ -880,6 +882,8 @@ bool IoTProtocol::sendSensorData(float ppm, String quality, bool relayState) {
     doc["quality"] = quality;
     doc["relay_state"] = relayState ? "ON" : "OFF";
     doc["alarm_state"] = alarm.getAlarmState() ? "ACTIVE" : "INACTIVE";  // LED/buzzer alarm state
+    doc["temperature"] = currentTemperature;
+    doc["humidity"] = currentHumidity;
     doc["timestamp"] = getCurrentTimestamp();
 
     String jsonString;
@@ -964,6 +968,8 @@ String IoTProtocol::createSensorData(float ppm, String quality, bool relayState)
     doc["quality"] = quality;
     doc["relay_state"] = relayState ? "ON" : "OFF";
     doc["alarm_state"] = alarm.getAlarmState() ? "ACTIVE" : "INACTIVE";
+    doc["temperature"] = currentTemperature;
+    doc["humidity"] = currentHumidity;
     doc["timestamp"] = getCurrentTimestamp();
 
     String output;
@@ -1010,6 +1016,60 @@ bool IoTProtocol::updateDeviceStatus(bool online) {
     return false;
 }
 
+// DHT Temperature/Humidity Sensor class
+class DHTSensor {
+private:
+    DHT dht;
+    int sensorPin;
+    float temperature;
+    float humidity;
+
+public:
+    DHTSensor();
+    void init();
+    float readTemperature();
+    float readHumidity();
+    bool isValidReading();
+};
+
+DHTSensor::DHTSensor() : dht(DHT_PIN, DHT_TYPE) {
+    sensorPin = DHT_PIN;
+    temperature = 0.0;
+    humidity = 0.0;
+}
+
+void DHTSensor::init() {
+    dht.begin();
+    Serial.println("DHT sensor initialized");
+}
+
+float DHTSensor::readTemperature() {
+    // Read temperature in Celsius
+    temperature = dht.readTemperature();
+    if (isnan(temperature)) {
+        Serial.println("Failed to read temperature from DHT sensor!");
+        return 0.0;
+    }
+    Serial.printf("Temperature: %.2f°C\n", temperature);
+    return temperature;
+}
+
+float DHTSensor::readHumidity() {
+    // Read humidity
+    humidity = dht.readHumidity();
+    if (isnan(humidity)) {
+        Serial.println("Failed to read humidity from DHT sensor!");
+        return 0.0;
+    }
+    Serial.printf("Humidity: %.2f%%\n", humidity);
+    return humidity;
+}
+
+bool DHTSensor::isValidReading() {
+    // Check if the last readings were valid
+    return (!isnan(temperature) && !isnan(humidity));
+}
+
 // Global objects
 WiFiManager wifiManager;
 IoTProtocol iotProtocol;
@@ -1017,6 +1077,7 @@ MQ2Sensor sensor;
 OLEDDisplay display;
 RelayController relay;
 AlarmController alarm;
+DHTSensor dhtSensor;
 
 // Global variables
 unsigned long lastSensorRead = 0;
@@ -1029,6 +1090,8 @@ bool relayState = false;
 bool alarmState = false;  // Track alarm state separately
 int samplingInterval = 5; // seconds
 String customMessage = "";
+float currentTemperature = 0.0;
+float currentHumidity = 0.0;
 
 void setup() {
     Serial.begin(115200);
@@ -1042,6 +1105,7 @@ void setup() {
     relay.init();  // Initialize relay for other devices (independent of alarm)
 
     sensor.init();
+    dhtSensor.init();  // Initialize DHT temperature/humidity sensor
 
     // Connect to WiFi
     if (!wifiManager.connect()) {
@@ -1088,7 +1152,12 @@ void loop() {
         currentPPM = sensor.readPPM();
         currentQuality = sensor.getAirQuality(currentPPM);
 
+        // Read temperature and humidity
+        currentTemperature = dhtSensor.readTemperature();
+        currentHumidity = dhtSensor.readHumidity();
+
         Serial.printf("PPM: %.2f, Quality: %s\n", currentPPM, currentQuality.c_str());
+        Serial.printf("Temperature: %.2f°C, Humidity: %.2f%%\n", currentTemperature, currentHumidity);
 
         // Check if PPM has reached dangerous level (1000) to activate alarm
         if (currentPPM >= 1000 && !alarmState) {
