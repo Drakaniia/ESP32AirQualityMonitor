@@ -3,12 +3,12 @@
 
 // WiFi Configuration
 #define WIFI_SSID "Hotspot1"
-#define WIFI_PASSWORD "Kenjigwapo12"
+#define WIFI_PASSWORD "12345678"
 
 #define DEVICE_ID "esp32_01"
 
 // Hardware Pin Configuration
-#define MQ135_PIN 34          // Analog pin for MQ-135 sensor
+#define MQ2_PIN 34            // Analog pin for MQ-2 sensor
 #define RELAY_PIN 26          // Digital pin for relay module
 #define OLED_SDA 21           // I2C SDA pin for OLED
 #define OLED_SCL 22           // I2C SCL pin for OLED
@@ -18,8 +18,8 @@
 #define SCREEN_HEIGHT 64      // OLED display height, in pixels
 #define OLED_ADDRESS 0x3C     // I2C address for SSD1306
 
-// MQ-135 Sensor Configuration
-#define MQ135_R0 76.63        // Clean air resistance value (will be calibrated)
+// MQ-2 Sensor Configuration
+#define MQ2_R0 10.0           // Initial R0 value for MQ-2 sensor (will be calibrated)
 
 // Timing Configuration
 #define SENSOR_READ_INTERVAL 5000     // Sensor reading interval (ms)

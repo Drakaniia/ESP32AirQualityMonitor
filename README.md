@@ -140,7 +140,7 @@ http://localhost:3000
 │   ├── config.h           # Configuration constants
 │   ├── wifi_manager.*     # WiFi connection management
 │   ├── iot_protocol.*     # MQTT communication
-│   ├── sensor_mq135.*     # MQ-135 sensor handling
+│   ├── sensor_mq2.*       # MQ-2 sensor handling
 │   ├── oled_display.*     # OLED display management
 │   └── relay_controller.* # Relay control logic
 ├── dashboard/              # Next.js web dashboard
@@ -174,7 +174,7 @@ Edit `src/config.h`:
 #define DEVICE_ID "esp32_01"  // Unique identifier for your device
 
 // Hardware Pin Configuration
-#define MQ135_PIN 34          // Analog pin for MQ-135 sensor
+#define MQ2_PIN 34            // Analog pin for MQ-2 sensor
 #define RELAY_PIN 26          // Digital pin for relay module (optional)
 #define OLED_SDA 21           // I2C SDA pin for OLED
 #define OLED_SCL 22           // I2C SCL pin for OLED

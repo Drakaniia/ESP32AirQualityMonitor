@@ -7,14 +7,14 @@
 #include "config.h"
 #include "wifi_manager.h"
 #include "iot_protocol.h"
-#include "sensor_mq135.h"
+#include "sensor_mq2.h"
 #include "oled_display.h"
 #include "relay_controller.h"
 
 // Global objects
 WiFiManager wifiManager;
 IoTProtocol iotProtocol;
-MQ135Sensor sensor;
+MQ2Sensor sensor;
 OLEDDisplay display;
 RelayController relay;
 
