@@ -1,11 +1,19 @@
 # ESP32 Air Quality Monitor
 
-A comprehensive IoT system for real-time combustible gas monitoring using ESP32, MQ-2 sensor, MQTT communication, and a responsive web dashboard with Firebase Authentication.
+A comprehensive IoT system for real-time air quality monitoring using ESP32, MQ-2 gas sensor, DHT temperature/humidity sensor (DHT11/DHT22), MQTT communication, and a responsive web dashboard with Firebase Authentication.
+
+## Preview
+
+![Dashboard View 1](img/dashboard1.png)
+![Dashboard View 2](img/dashboard2.png)
+![Dashboard View 3](img/dashboard3.png)
+![Dashboard View 4](img/dashboard4.png)
 
 ## Features
 
 ### ESP32 Device
 - **Real-time Sensing**: MQ-2 combustible gas sensor with PPM readings
+- **Temperature & Humidity**: DHT11/DHT22 sensor for environmental monitoring (configurable with calibration)
 - **Local Display**: 0.96" OLED showing current air quality and relay status
 - **MQTT Communication**: Reliable MQTT-based data transmission
 - **WiFi Connectivity**: Reliable WiFi connection with automatic reconnection
@@ -48,6 +56,7 @@ Firebase Authentication
 ### Components
 - ESP32 Dev Board
 - MQ-2 Gas Sensor
+- DHT11 or DHT22 Temperature/Humidity Sensor
 - 0.96" OLED Display (I2C, SSD1306)
 - 5V Relay Module (optional)
 - Breadboard and Jumper Wires
@@ -66,6 +75,10 @@ Firebase Authentication
 | MQ-2 | VCC | Red | 5V | Power Supply |
 | MQ-2 | GND | Black | GND | Ground |
 | MQ-2 | AOUT | Green | GPIO34 | Analog Output |
+| **DHT11/DHT22 Sensor** |
+| DHT | VCC | Red | 3.3V | Power Supply |
+| DHT | GND | Black | GND | Ground |
+| DHT | DATA | Yellow | GPIO14 | Digital Data Pin |
 | **Relay Module** (bidirectional control) |
 | Relay | VCC | Red | 5V | Power Supply |
 | Relay | GND | Black | GND | Ground |
@@ -178,9 +191,15 @@ Edit `src/config.h`:
 
 // Hardware Pin Configuration
 #define MQ2_PIN 34            // Analog pin for MQ-2 sensor
+#define DHT_PIN 14            // Digital pin for DHT11/DHT22 temperature/humidity sensor
 #define RELAY_PIN 26          // Digital pin for relay module (optional)
 #define OLED_SDA 21           // I2C SDA pin for OLED
 #define OLED_SCL 22           // I2C SCL pin for OLED
+
+// DHT Sensor Configuration
+#define DHT_TYPE DHT22        // Type of DHT sensor (DHT22 for better accuracy, DHT11 for basic functionality)
+#define DHT_TEMP_OFFSET -2.0   // Temperature calibration offset (adjust based on testing)
+#define DHT_HUMID_OFFSET 5.0   // Humidity calibration offset (adjust based on testing)
 ```
 
 ### Web Dashboard
@@ -203,8 +222,11 @@ export DASHBOARD_API_URL=http://localhost:3000
 export BRIDGE_PORT=3002
 ```
 
-## Gas Detection Levels
+## Air Quality Monitoring
 
+The system monitors multiple environmental parameters:
+
+### Gas Detection Levels
 The system categorizes combustible gas levels based on PPM readings:
 
 - **Excellent**: < 200 PPM (Very low gas concentration)
@@ -214,10 +236,17 @@ The system categorizes combustible gas levels based on PPM readings:
 - **Very Poor**: 2000-5000 PPM (Very high gas concentration - immediate danger)
 - **Hazardous**: > 5000 PPM (Dangerous gas concentration - emergency)
 
+### Temperature & Humidity Monitoring
+The DHT11/DHT22 sensor provides temperature and humidity readings with configurable calibration:
+- Temperature accuracy: ±2°C for DHT11, ±0.5°C for DHT22
+- Humidity accuracy: ±5% for DHT11, ±2% for DHT22
+- Calibrated readings with offset compensation
+
 ## Dashboard Features
 
 ### Real-time Monitoring
 - Live PPM readings with color-coded quality indicators
+- Temperature and humidity readings with calibration
 - Device online/offline status
 - Relay state indicators
 - Last update timestamps
@@ -242,7 +271,7 @@ The system categorizes combustible gas levels based on PPM readings:
 - **Status**: `airquality/esp32_01/status`
 
 ### Message Format
-Sensor data includes: device_id, ppm, quality, relay_state, timestamp
+Sensor data includes: device_id, ppm, temperature, humidity, quality, relay_state, timestamp
 Commands include: relay control actions, display messages
 
 ## Security
