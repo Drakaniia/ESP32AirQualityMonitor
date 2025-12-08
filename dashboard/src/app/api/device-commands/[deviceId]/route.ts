@@ -3,8 +3,10 @@ import { NextRequest, NextResponse } from 'next/server';
 // In-memory store for device commands
 let deviceCommands: Record<string, any> = {
   'esp32_01': {
-    relay_state: 'OFF',
-    sampling_interval: 5,
+    relay_state: 'ON',
+    buzzer_state: false,
+    led_state: false,
+    sampling_interval: 5, // Keep default for backward compatibility
     oled_message: '',
     last_update: Date.now()
   }

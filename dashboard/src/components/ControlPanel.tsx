@@ -6,7 +6,7 @@ import GlassCard from './GlassCard'
 
 interface DeviceCommand {
   relay_state: string
-  sampling_interval: number
+  sampling_interval?: number
   oled_message: string
   last_update: number
 }
@@ -20,8 +20,10 @@ interface ControlPanelProps {
 export default function ControlPanel({ currentCommands, onCommandUpdate, currentPPM }: ControlPanelProps) {
   const { isSimulationMode, startSimulation, stopSimulation, setSimulationScenario, updateSimulationCommand } = useSimulationContext()
   const [buzzerState, setBuzzerState] = useState(currentCommands?.relay_state || 'ON')
+  const [buzzerEnabled, setBuzzerEnabled] = useState(currentCommands?.buzzer_state ?? false) // New state for buzzer - default to false
+  const [ledEnabled, setLedEnabled] = useState(currentCommands?.led_state ?? false) // New state for LED - default to false
   const [emergencySilence, setEmergencySilence] = useState(false)
-  const [samplingInterval, setSamplingInterval] = useState(currentCommands?.sampling_interval || 5)
+  const [samplingInterval, setSamplingInterval] = useState(currentCommands?.sampling_interval || 5) // Keep for backward compatibility
   const [oledMessage, setOledMessage] = useState(currentCommands?.oled_message || '')
 
   const handleBuzzerToggle = async () => {
@@ -39,11 +41,7 @@ export default function ControlPanel({ currentCommands, onCommandUpdate, current
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            buzzer_override: true,
-            buzzer_state: newState === 'ON',
-            clear_override: true, // Clear any existing emergency override
-            relay_state: 'ON', // Keep relay ON for power
-            sampling_interval: samplingInterval,
+            relay_state: newState, // Send the actual relay state (ON/OFF)
             oled_message: oledMessage,
             last_update: Date.now()
           })
@@ -60,11 +58,12 @@ export default function ControlPanel({ currentCommands, onCommandUpdate, current
     }
   }
 
-  const handleSamplingIntervalChange = async (newInterval: number) => {
-    setSamplingInterval(newInterval)
+  // New function to handle separate buzzer control
+  const handleBuzzerControl = async (enabled: boolean) => {
+    setBuzzerEnabled(enabled);
 
     if (isSimulationMode) {
-      updateSimulationCommand({ sampling_interval: newInterval, last_update: Date.now() })
+      updateSimulationCommand({ buzzer_state: enabled, last_update: Date.now() })
     } else {
       try {
         const response = await fetch('http://localhost:3001/api/send-command/esp32_01', {
@@ -73,8 +72,9 @@ export default function ControlPanel({ currentCommands, onCommandUpdate, current
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
+            buzzer_state: enabled,
+            buzzer_override: true,
             relay_state: buzzerState,
-            sampling_interval: newInterval,
             oled_message: oledMessage,
             last_update: Date.now()
           })
@@ -84,12 +84,76 @@ export default function ControlPanel({ currentCommands, onCommandUpdate, current
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        onCommandUpdate({ sampling_interval: newInterval, last_update: Date.now() });
+        onCommandUpdate({ buzzer_state: enabled, last_update: Date.now() });
       } catch (error) {
-        console.error('Error sending sampling interval command:', error);
+        console.error('Error sending buzzer control command:', error);
       }
     }
   }
+
+  // New function to handle separate LED control
+  const handleLedControl = async (enabled: boolean) => {
+    setLedEnabled(enabled);
+
+    if (isSimulationMode) {
+      updateSimulationCommand({ led_state: enabled, last_update: Date.now() })
+    } else {
+      try {
+        const response = await fetch('http://localhost:3001/api/send-command/esp32_01', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            led_state: enabled,
+            led_override: true,
+            relay_state: buzzerState,
+            oled_message: oledMessage,
+            last_update: Date.now()
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        onCommandUpdate({ led_state: enabled, last_update: Date.now() });
+      } catch (error) {
+        console.error('Error sending LED control command:', error);
+      }
+    }
+  }
+
+  // const handleSamplingIntervalChange = async (newInterval: number) => {
+  //   setSamplingInterval(newInterval)
+
+  //   if (isSimulationMode) {
+  //     updateSimulationCommand({ sampling_interval: newInterval, last_update: Date.now() })
+  //   } else {
+  //     try {
+  //       const response = await fetch('http://localhost:3001/api/send-command/esp32_01', {
+  //         method: 'POST',
+  //         headers: {
+  //           'Content-Type': 'application/json',
+  //         },
+  //         body: JSON.stringify({
+  //           relay_state: buzzerState,
+  //           sampling_interval: newInterval,
+  //           oled_message: oledMessage,
+  //           last_update: Date.now()
+  //         })
+  //       });
+
+  //       if (!response.ok) {
+  //         throw new Error(`HTTP error! status: ${response.status}`);
+  //       }
+
+  //       onCommandUpdate({ sampling_interval: newInterval, last_update: Date.now() });
+  //     } catch (error) {
+  //       console.error('Error sending sampling interval command:', error);
+  //     }
+  //   }
+  // }
 
   const handleOledMessageSend = async () => {
     if (isSimulationMode) {
@@ -103,7 +167,6 @@ export default function ControlPanel({ currentCommands, onCommandUpdate, current
           },
           body: JSON.stringify({
             relay_state: buzzerState,
-            sampling_interval: samplingInterval,
             oled_message: oledMessage,
             last_update: Date.now()
           })
@@ -198,7 +261,10 @@ export default function ControlPanel({ currentCommands, onCommandUpdate, current
           <label className="block text-sm font-medium text-white mb-3">
             Buzzer & LED Control
           </label>
-          <div className="flex items-center space-x-3 mb-3">
+
+          {/* Relay Power Control */}
+          <div className="flex items-center justify-between mb-3 p-3 bg-gray-50/30 rounded-lg">
+            <span className="text-sm text-white">Device Power (Relay)</span>
             <button
               onClick={handleBuzzerToggle}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
@@ -211,12 +277,42 @@ export default function ControlPanel({ currentCommands, onCommandUpdate, current
                 }`}
               />
             </button>
-            <span className="text-sm text-white">
-              Buzzer is {buzzerState === 'ON' ? 'ON' : 'OFF'}
-              {emergencySilence && <span className="ml-2 text-yellow-300">(Silenced)</span>}
-            </span>
           </div>
-          
+
+          {/* Individual Buzzer Control */}
+          <div className="flex items-center justify-between mb-3 p-3 bg-gray-50/30 rounded-lg">
+            <span className="text-sm text-white">Buzzer</span>
+            <button
+              onClick={() => handleBuzzerControl(!buzzerEnabled)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                buzzerEnabled ? 'bg-green-600' : 'bg-gray-200'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  buzzerEnabled ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* Individual LED Control */}
+          <div className="flex items-center justify-between p-3 bg-gray-50/30 rounded-lg">
+            <span className="text-sm text-white">LED</span>
+            <button
+              onClick={() => handleLedControl(!ledEnabled)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                ledEnabled ? 'bg-green-600' : 'bg-gray-200'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  ledEnabled ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+
           {/* Emergency Buzzer & LED Off Button - Only show when PPM > 1000 */}
           {currentPPM && currentPPM > 1000 && (
             <div className="mt-3 p-3 bg-red-500/20 border border-red-500/50 rounded-lg">
@@ -239,7 +335,6 @@ export default function ControlPanel({ currentCommands, onCommandUpdate, current
                            buzzer_override: true,
                            buzzer_state: false,
                            relay_state: 'ON', // Keep relay ON for power
-                           sampling_interval: samplingInterval,
                            oled_message: 'Buzzer & LED silenced',
                            last_update: Date.now()
                          })
@@ -266,25 +361,6 @@ export default function ControlPanel({ currentCommands, onCommandUpdate, current
           )}
         </div>
 
-        {/* Sampling Interval */}
-        <div>
-          <label className="block text-sm font-medium text-white mb-3">
-            Sampling Interval: {samplingInterval} seconds
-          </label>
-          <input
-            type="range"
-            min="1"
-            max="60"
-            value={samplingInterval}
-            onChange={(e) => handleSamplingIntervalChange(parseInt(e.target.value))}
-            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-          />
-          <div className="flex justify-between text-xs text-white mt-1">
-            <span>1s</span>
-            <span>30s</span>
-            <span>60s</span>
-          </div>
-        </div>
 
         {/* OLED Message */}
         <div>
@@ -318,7 +394,6 @@ export default function ControlPanel({ currentCommands, onCommandUpdate, current
                       },
                       body: JSON.stringify({
                         relay_state: buzzerState,
-                        sampling_interval: samplingInterval,
                         oled_message: 'CLEAR',
                         last_update: Date.now()
                       })
@@ -359,7 +434,6 @@ export default function ControlPanel({ currentCommands, onCommandUpdate, current
                     },
                     body: JSON.stringify({
                       relay_state: buzzerState,
-                      sampling_interval: samplingInterval,
                       oled_message: 'Air Quality OK',
                       last_update: Date.now()
                     })
@@ -389,7 +463,6 @@ export default function ControlPanel({ currentCommands, onCommandUpdate, current
                     },
                     body: JSON.stringify({
                       relay_state: buzzerState,
-                      sampling_interval: samplingInterval,
                       oled_message: 'Warning!',
                       last_update: Date.now()
                     })
@@ -417,12 +490,32 @@ export default function ControlPanel({ currentCommands, onCommandUpdate, current
               Toggle Buzzer
             </button>
             <button
-              onClick={() => {
-                handleSamplingIntervalChange(10)
+              onClick={async () => {
+                try {
+                  const response = await fetch('http://localhost:3001/api/send-command/esp32_01', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      relay_state: buzzerState,
+                      oled_message: oledMessage,
+                      last_update: Date.now()
+                    })
+                  });
+
+                  if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                  }
+
+                  onCommandUpdate({ last_update: Date.now() });
+                } catch (error) {
+                  console.error('Error sending reset command:', error);
+                }
               }}
               className="px-3 py-2 bg-white/20 backdrop-blur-sm text-white text-xs font-medium rounded hover:bg-white/30 border border-white/30"
             >
-              Reset (10s)
+              Refresh
             </button>
           </div>
         </div>

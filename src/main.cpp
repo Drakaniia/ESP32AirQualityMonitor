@@ -117,13 +117,23 @@ void loop() {
         }
     }
 
-    // Check for commands from MQTT every 10 seconds
+    // Check for commands from MQTT every 2 seconds
     if (currentMillis - lastCommandCheck >= COMMAND_CHECK_INTERVAL) {
         lastCommandCheck = currentMillis;
 
         String commands = iotProtocol.receiveCommand();
         if (commands.length() > 0) {
+            Serial.printf("=== COMMAND RECEIVED ===\n");
+            Serial.printf("Raw command: %s\n", commands.c_str());
             processCommands(commands);
+            Serial.printf("=== COMMAND PROCESSED ===\n");
+        } else {
+            // Debug: Show we're checking for commands
+            static unsigned long lastDebug = 0;
+            if (currentMillis - lastDebug > 10000) { // Every 10 seconds
+                Serial.println("Checking for commands... none received");
+                lastDebug = currentMillis;
+            }
         }
     }
 
@@ -142,12 +152,30 @@ void processCommands(String commandsJson) {
         return;
     }
 
-    // Process buzzer/LED manual override command
+    // Process buzzer manual override command
     if (doc.containsKey("buzzer_override")) {
         bool override = doc["buzzer_override"];
         bool state = doc["buzzer_state"];
-        alert.setManualOverride(override, state);
-        Serial.printf("Buzzer/LED override: %s, State: %s\n", override ? "ON" : "OFF", state ? "ON" : "OFF");
+        Serial.printf("Processing buzzer command - Override: %s, State: %s\n", override ? "ON" : "OFF", state ? "ON" : "OFF");
+        Serial.printf("Relay state: %s, Buzzer pin: %d\n", relayState ? "ON" : "OFF", BUZZER_PIN);
+        
+        // Ensure relay is ON to power buzzer
+        if (!relayState) {
+            Serial.println("Warning: Relay is OFF, turning ON to power buzzer");
+            relay.turnOn();
+            relayState = true;
+        }
+        
+        alert.setBuzzerManualOverride(override, state);
+        Serial.printf("Buzzer override set: %s, State: %s\n", override ? "ON" : "OFF", state ? "ON" : "OFF");
+    }
+    
+    // Process LED override command (separate from buzzer)
+    if (doc.containsKey("led_override")) {
+        bool override = doc["led_override"];
+        bool state = doc["led_state"];
+        alert.setLedManualOverride(override, state);
+        Serial.printf("LED override: %s, State: %s\n", override ? "ON" : "OFF", state ? "ON" : "OFF");
     }
     
     // Clear manual override when using normal toggle (no override flag)
@@ -192,5 +220,55 @@ void processCommands(String commandsJson) {
         if (customMessage == "CLEAR") {
             customMessage = "";
         }
+    }
+    
+    // Process direct buzzer test command
+    if (doc.containsKey("test_buzzer")) {
+        bool testState = doc["test_buzzer"];
+        Serial.printf("=== DIRECT BUZZER TEST ===\n");
+        Serial.printf("Relay state: %s\n", relayState ? "ON" : "OFF");
+        Serial.printf("Buzzer pin: %d\n", BUZZER_PIN);
+        Serial.printf("Setting pin %d to %s\n", BUZZER_PIN, testState ? "HIGH" : "LOW");
+        
+        // Ensure relay is ON
+        if (!relayState) {
+            Serial.println("Turning relay ON for buzzer test");
+            relay.turnOn();
+            relayState = true;
+        }
+        
+        // Direct pin control - bypass all alert controller logic
+        digitalWrite(BUZZER_PIN, testState ? HIGH : LOW);
+        Serial.printf("BUZZER PIN %d DIRECTLY SET TO %s\n", BUZZER_PIN, testState ? "HIGH" : "LOW");
+        
+        // Also test LED
+        digitalWrite(LED_PIN, testState ? HIGH : LOW);
+        Serial.printf("LED PIN %d DIRECTLY SET TO %s\n", LED_PIN, testState ? "HIGH" : "LOW");
+        
+        Serial.printf("=== END DIRECT TEST ===\n");
+    }
+    
+    // Process LED test command
+    if (doc.containsKey("test_led")) {
+        bool testState = doc["test_led"];
+        Serial.printf("=== DIRECT LED TEST ===\n");
+        Serial.printf("LED pin: %d\n", LED_PIN);
+        Serial.printf("Setting pin %d to %s\n", LED_PIN, testState ? "HIGH" : "LOW");
+        
+        // Direct pin control - bypass all alert controller logic
+        digitalWrite(LED_PIN, testState ? HIGH : LOW);
+        Serial.printf("LED PIN %d DIRECTLY SET TO %s\n", LED_PIN, testState ? "HIGH" : "LOW");
+        
+        Serial.printf("=== END LED TEST ===\n");
+    }
+    
+    // Process pin status check command
+    if (doc.containsKey("check_pins")) {
+        Serial.printf("=== PIN STATUS CHECK ===\n");
+        Serial.printf("LED Pin: %d, Mode: OUTPUT, State: %s\n", LED_PIN, digitalRead(LED_PIN) ? "HIGH" : "LOW");
+        Serial.printf("Buzzer Pin: %d, Mode: OUTPUT, State: %s\n", BUZZER_PIN, digitalRead(BUZZER_PIN) ? "HIGH" : "LOW");
+        Serial.printf("Relay Pin: %d, State: %s\n", RELAY_PIN, digitalRead(RELAY_PIN) ? "HIGH" : "LOW");
+        Serial.printf("Relay State Variable: %s\n", relayState ? "ON" : "OFF");
+        Serial.printf("=== END PIN CHECK ===\n");
     }
 }

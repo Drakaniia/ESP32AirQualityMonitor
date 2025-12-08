@@ -22,7 +22,9 @@ interface AlertEntry {
 
 interface DeviceCommand {
   relay_state: string
-  sampling_interval: number
+  buzzer_state?: boolean
+  led_state?: boolean
+  sampling_interval?: number
   oled_message: string
   last_update: number
 }
@@ -45,8 +47,10 @@ export class SimulationController {
   constructor() {
     this.generator = new FakeDataGenerator()
     this.simulatedCommands = {
-      relay_state: 'OFF',
-      sampling_interval: 5,
+      relay_state: 'ON',
+      buzzer_state: false,
+      led_state: false,
+      sampling_interval: 5, // Still keep default for backward compatibility
       oled_message: 'Simulation Active',
       last_update: Date.now(),
     }

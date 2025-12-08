@@ -26,7 +26,7 @@
 // Timing Configuration
 #define SENSOR_READ_INTERVAL 5000     // Sensor reading interval (ms)
 #define MQTT_UPDATE_INTERVAL 30000    // MQTT update interval (ms)
-#define COMMAND_CHECK_INTERVAL 10000   // Command check interval (ms)
+#define COMMAND_CHECK_INTERVAL 2000    // Command check interval (ms) - reduced for faster response
 
 // System Configuration
 #define DEBUG true            // Enable debug output

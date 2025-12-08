@@ -23,7 +23,9 @@ interface SensorReading {
 
 interface DeviceCommand {
   relay_state: string
-  sampling_interval: number
+  buzzer_state?: boolean
+  led_state?: boolean
+  sampling_interval?: number
   oled_message: string
   last_update: number
 }

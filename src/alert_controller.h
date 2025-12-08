@@ -12,6 +12,10 @@ private:
     bool isInitialized;
     bool manualOverride;  // Manual override state
     bool manualState;    // Manual ON/OFF state when override is active
+    bool buzzerManualOverride;  // Separate buzzer manual override
+    bool buzzerManualState;     // Buzzer manual state
+    bool ledManualOverride;    // Separate LED manual override
+    bool ledManualState;        // LED manual state
     unsigned long lastBlinkTime;
     unsigned long lastBeepTime;
     unsigned long blinkInterval;
@@ -31,6 +35,8 @@ public:
     float getPPMThreshold();
     void checkPPMLevel(float currentPPM);
     void setManualOverride(bool override, bool state);
+    void setBuzzerManualOverride(bool override, bool state);
+    void setLedManualOverride(bool override, bool state);
     void clearManualOverride();
     bool getManualOverride();
     bool getManualState();
