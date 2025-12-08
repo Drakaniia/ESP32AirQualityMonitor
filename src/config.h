@@ -25,13 +25,14 @@
 #define MQ2_R0 0.0            // Initial R0 value for MQ-2 sensor (will be calibrated during initialization)
 
 // DHT Sensor Configuration
-#define DHT_TYPE DHT11        // Type of DHT sensor (DHT22, DHT11, etc.)
+// Note: DHT22 is recommended for better accuracy (±0.5°C) vs DHT11 (±2°C)
+#define DHT_TYPE DHT22        // Type of DHT sensor (DHT22 for better accuracy, DHT11 for basic functionality)
 
 // DHT11 Calibration Settings
 #define DHT_TEMP_OFFSET -2.0   // Temperature calibration offset (adjust based on testing)
 #define DHT_HUMID_OFFSET 5.0   // Humidity calibration offset (adjust based on testing)
-#define DHT_READING_SAMPLES 3  // Number of readings to average for stability
-#define DHT_READING_DELAY 2000 // Delay between readings (ms) - DHT11 needs 2+ seconds
+#define DHT_READING_SAMPLES 5  // Number of readings to average for stability (increased for better accuracy)
+#define DHT_READING_DELAY 2000 // Delay between readings (ms) - Legacy definition, now controlled in code
 
 // Timing Configuration
 #define SENSOR_READ_INTERVAL 2000     // Sensor reading interval (ms) - reduced for faster response

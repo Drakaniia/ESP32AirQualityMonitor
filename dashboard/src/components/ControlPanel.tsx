@@ -37,7 +37,7 @@ export default function ControlPanel({ currentCommands, onCommandUpdate, current
       updateSimulationCommand({ relay_state: newState, last_update: Date.now() })
     } else {
       try {
-        const response = await fetch('http://localhost:3001/api/send-command/esp32_01', {
+        const response = await fetch('/api/send-command/esp32_01', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -68,7 +68,7 @@ export default function ControlPanel({ currentCommands, onCommandUpdate, current
       updateSimulationCommand({ buzzer_state: enabled, last_update: Date.now() })
     } else {
       try {
-        const response = await fetch('http://localhost:3001/api/send-command/esp32_01', {
+        const response = await fetch('/api/send-command/esp32_01', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -101,7 +101,7 @@ export default function ControlPanel({ currentCommands, onCommandUpdate, current
       updateSimulationCommand({ led_state: enabled, last_update: Date.now() })
     } else {
       try {
-        const response = await fetch('http://localhost:3001/api/send-command/esp32_01', {
+        const response = await fetch('/api/send-command/esp32_01', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -162,7 +162,7 @@ export default function ControlPanel({ currentCommands, onCommandUpdate, current
       updateSimulationCommand({ oled_message: oledMessage, last_update: Date.now() })
     } else {
       try {
-        const response = await fetch('http://localhost:3001/api/send-command/esp32_01', {
+        const response = await fetch('/api/send-command/esp32_01', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -328,7 +328,7 @@ export default function ControlPanel({ currentCommands, onCommandUpdate, current
                      updateSimulationCommand({ relay_state: 'OFF', last_update: Date.now() })
                    } else {
                      try {
-                       const response = await fetch('http://localhost:3001/api/send-command/esp32_01', {
+                       const response = await fetch('/api/send-command/esp32_01', {
                          method: 'POST',
                          headers: {
                            'Content-Type': 'application/json',
@@ -389,7 +389,7 @@ export default function ControlPanel({ currentCommands, onCommandUpdate, current
                 onClick={async () => {
                   setOledMessage('CLEAR')
                   try {
-                    const response = await fetch('http://localhost:3001/api/send-command/esp32_01', {
+                    const response = await fetch('/api/send-command/esp32_01', {
                       method: 'POST',
                       headers: {
                         'Content-Type': 'application/json',
@@ -429,7 +429,7 @@ export default function ControlPanel({ currentCommands, onCommandUpdate, current
               onClick={async () => {
                 setOledMessage('Air Quality OK')
                 try {
-                  const response = await fetch('http://localhost:3001/api/send-command/esp32_01', {
+                  const response = await fetch('/api/send-command/esp32_01', {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json',
@@ -458,7 +458,7 @@ export default function ControlPanel({ currentCommands, onCommandUpdate, current
               onClick={async () => {
                 setOledMessage('Warning!')
                 try {
-                  const response = await fetch('http://localhost:3001/api/send-command/esp32_01', {
+                  const response = await fetch('/api/send-command/esp32_01', {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json',
@@ -494,7 +494,7 @@ export default function ControlPanel({ currentCommands, onCommandUpdate, current
             <button
               onClick={async () => {
                 try {
-                  const response = await fetch('http://localhost:3001/api/send-command/esp32_01', {
+                  const response = await fetch('/api/send-command/esp32_01', {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json',
