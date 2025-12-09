@@ -125,12 +125,12 @@ private:
     float calculateResistance();
     float calculateRatio();
     float calculatePPM();
-    void calibrate();
 
 public:
     MQ2Sensor();
     void init();
     void initWithQuickWarmup();  // Alternative initialization with faster warmup
+    void calibrate();            // Make calibration public so it can be called from setup
     float readPPM();
     String getAirQuality(float ppm);
     float getVoltage();
@@ -1115,13 +1115,15 @@ float DHTSensor::readTemperature() {
     // Read temperature in Celsius
     temperature = dht.readTemperature();
 
-    // Apply calibration offset from config.h
-    temperature += DHT_TEMP_OFFSET;
-
-    if (isnan(temperature)) {
+    // Check for error conditions (DHT sensors return specific error values)
+    if (isnan(temperature) || temperature == -999) {
         Serial.println("Failed to read temperature from DHT sensor!");
         return 0.0;
     }
+
+    // Apply calibration offset from config.h
+    temperature += DHT_TEMP_OFFSET;
+
     Serial.printf("Temperature: %.2f°C (calibrated)\n", temperature);
     return temperature;
 }
@@ -1130,6 +1132,12 @@ float DHTSensor::readHumidity() {
     // Read humidity
     humidity = dht.readHumidity();
 
+    // Check for error conditions (DHT sensors return specific error values)
+    if (isnan(humidity) || humidity == 0) {
+        Serial.println("Failed to read humidity from DHT sensor!");
+        return 0.0;
+    }
+
     // Apply calibration offset from config.h
     humidity += DHT_HUMID_OFFSET;
 
@@ -1137,10 +1145,6 @@ float DHTSensor::readHumidity() {
     if (humidity < 0) humidity = 0;
     if (humidity > 100) humidity = 100;
 
-    if (isnan(humidity)) {
-        Serial.println("Failed to read humidity from DHT sensor!");
-        return 0.0;
-    }
     Serial.printf("Humidity: %.2f%% (calibrated)\n", humidity);
     return humidity;
 }
@@ -1152,7 +1156,8 @@ float DHTSensor::readTemperatureWithAveraging(int samples) {
     for (int i = 0; i < samples; i++) {
         float temp = dht.readTemperature();
 
-        if (!isnan(temp)) {
+        // Check for error conditions (DHT sensors return specific error values)
+        if (!isnan(temp) && temp != -999) {
             // Apply calibration offset
             temp += DHT_TEMP_OFFSET;
             totalTemp += temp;
@@ -1185,7 +1190,8 @@ float DHTSensor::readHumidityWithAveraging(int samples) {
     for (int i = 0; i < samples; i++) {
         float humidityReading = dht.readHumidity();
 
-        if (!isnan(humidityReading)) {
+        // Check for error conditions (DHT sensors return specific error values)
+        if (!isnan(humidityReading) && humidityReading != 0) {
             // Apply calibration offset
             humidityReading += DHT_HUMID_OFFSET;
 
@@ -1220,7 +1226,8 @@ float DHTSensor::readTemperatureWithRetry(int maxRetries) {
     for (int attempt = 0; attempt < maxRetries; attempt++) {
         float temp = dht.readTemperature();
 
-        if (!isnan(temp)) {
+        // Check for error conditions (DHT sensors return specific error values)
+        if (!isnan(temp) && temp != -999) {
             // Apply calibration offset
             temp += DHT_TEMP_OFFSET;
             temperature = temp;
@@ -1245,7 +1252,8 @@ float DHTSensor::readHumidityWithRetry(int maxRetries) {
     for (int attempt = 0; attempt < maxRetries; attempt++) {
         float humidityReading = dht.readHumidity();
 
-        if (!isnan(humidityReading)) {
+        // Check for error conditions (DHT sensors return specific error values)
+        if (!isnan(humidityReading) && humidityReading != 0) {
             // Apply calibration offset
             humidityReading += DHT_HUMID_OFFSET;
 
@@ -1282,9 +1290,9 @@ bool DHTSensor::readBothWithAveragingAndRetry(float& outTemp, float& outHumidity
             float temp = dht.readTemperature();
             float humidity = dht.readHumidity();
 
-            // Check if readings are valid
-            bool tempValid = !isnan(temp);
-            bool humidityValid = !isnan(humidity);
+            // Check if readings are valid (DHT sensors return specific error values)
+            bool tempValid = (!isnan(temp) && temp != -999);
+            bool humidityValid = (!isnan(humidity) && humidity != 0);
 
             if (tempValid) {
                 // Apply calibration offset
@@ -1365,8 +1373,12 @@ bool DHTSensor::readBothWithAveragingAndRetry(float& outTemp, float& outHumidity
 }
 
 bool DHTSensor::isValidReading() {
-    // Check if the last readings were valid
-    return (!isnan(temperature) && !isnan(humidity));
+    // Check if the last readings were valid and within reasonable ranges
+    // DHT11/DHT22 can sometimes return extreme values in case of communication errors
+    bool tempValid = (!isnan(temperature) && temperature != -999 && temperature >= -40 && temperature <= 80);
+    bool humidityValid = (!isnan(humidity) && humidity != 0 && humidity >= 0 && humidity <= 100);
+
+    return (tempValid && humidityValid);
 }
 
 // Global objects
@@ -1487,6 +1499,15 @@ void loop() {
             // Fallback to basic read if advanced method fails
             currentTemperature = dhtSensor.readTemperature();
             currentHumidity = dhtSensor.readHumidity();
+        }
+
+        // Additional validation to detect invalid readings like 717.50°C, 1741.50% humidity
+        if (currentTemperature > 100 || currentTemperature < -50 || currentHumidity > 150 || currentHumidity < 0) {
+            Serial.printf("WARNING: Invalid reading detected - Temp=%.2f°C, Humidity=%.2f%%\n", currentTemperature, currentHumidity);
+            Serial.println("This usually indicates DHT sensor communication error. Check wiring and DHT_TYPE setting.");
+            // Reset to 0 to avoid using these invalid values
+            currentTemperature = 0.0;
+            currentHumidity = 0.0;
         }
 
         Serial.printf("PPM: %.2f, Quality: %s\n", currentPPM, currentQuality.c_str());

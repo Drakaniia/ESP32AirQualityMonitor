@@ -26,7 +26,7 @@
 
 // DHT Sensor Configuration
 // Note: DHT22 is recommended for better accuracy (±0.5°C) vs DHT11 (±2°C)
-#define DHT_TYPE DHT22        // Type of DHT sensor (DHT22 for better accuracy, DHT11 for basic functionality)
+#define DHT_TYPE DHT11        // Type of DHT sensor (DHT22 for better accuracy, DHT11 for basic functionality)
 
 // DHT11 Calibration Settings
 #define DHT_TEMP_OFFSET -2.0   // Temperature calibration offset (adjust based on testing)
