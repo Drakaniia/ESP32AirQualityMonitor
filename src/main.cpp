@@ -173,11 +173,11 @@ void loop() {
         // Update alert state (LED and buzzer)
         alert.update();
 
-        // Update display
+        // Update display only when needed
         if (customMessage.length() > 0) {
             display.showCustomMessage(customMessage);
             // Clear custom message after 10 seconds
-            if (millis() - customMessageTime > 10000) {
+            if (currentMillis - customMessageTime > 10000) {
                 customMessage = "";
             }
         } else {
@@ -206,20 +206,14 @@ void loop() {
             Serial.printf("Raw command: %s\n", commands.c_str());
             processCommands(commands);
             Serial.printf("=== COMMAND PROCESSED ===\n");
-        } else {
-            // Debug: Show we're checking for commands
-            static unsigned long lastDebug = 0;
-            if (currentMillis - lastDebug > 10000) { // Every 10 seconds
-                Serial.println("Checking for commands... none received");
-                lastDebug = currentMillis;
-            }
         }
     }
 
     // Call loop for IoT protocol (needed for MQTT command handling)
     iotProtocol.loop();
 
-    delay(100);
+    // Minimal delay to prevent watchdog trigger while maintaining responsiveness
+    delay(10);
 }
 
 void processCommands(String commandsJson) {

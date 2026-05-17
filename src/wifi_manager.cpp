@@ -14,13 +14,13 @@ bool WiFiManager::connect() {
     
     WiFi.mode(WIFI_STA); 
     WiFi.disconnect(true); 
-    delay(100);
+    delay(10);
     
     WiFi.begin(ssid, password);
     
     unsigned long startTime = millis();
     while (WiFi.status() != WL_CONNECTED && millis() - startTime < connectionTimeout) {
-        delay(500);
+        delay(100);
         Serial.print(".");
     }
     
