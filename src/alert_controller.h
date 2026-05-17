@@ -10,18 +10,22 @@ private:
     int buzzerPin;
     bool isActive;
     bool isInitialized;
-    bool manualOverride;  // Manual override state
-    bool manualState;    // Manual ON/OFF state when override is active
-    bool buzzerManualOverride;  // Separate buzzer manual override
-    bool buzzerManualState;     // Buzzer manual state
-    bool ledManualOverride;    // Separate LED manual override
-    bool ledManualState;        // LED manual state
-    unsigned long lastBlinkTime;
-    unsigned long lastBeepTime;
-    unsigned long blinkInterval;
-    unsigned long beepInterval;
+    
+    // Manual overrides
+    bool manualOverride;
+    bool manualState;
+    bool buzzerManualOverride;
+    bool buzzerManualState;
+    bool ledManualOverride;
+    bool ledManualState;
+    
+    uint32_t lastBlinkTime;
+    uint32_t lastBeepTime;
+    uint32_t blinkInterval;
+    uint32_t beepInterval;
     bool ledState;
     bool buzzerState;
+    
     RelayController* relayController;
 
 public:
@@ -30,16 +34,13 @@ public:
     void activate();
     void deactivate();
     void update();
-    bool isAlertActive();
-    void setPPMThreshold(float threshold);
-    float getPPMThreshold();
+    bool isAlertActive() const { return isActive; }
     void checkPPMLevel(float currentPPM);
     void setManualOverride(bool override, bool state);
     void setBuzzerManualOverride(bool override, bool state);
     void setLedManualOverride(bool override, bool state);
     void clearManualOverride();
-    bool getManualOverride();
-    bool getManualState();
+    bool getManualOverride() const { return manualOverride; }
 };
 
 #endif

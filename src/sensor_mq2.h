@@ -2,39 +2,37 @@
 #define SENSOR_MQ2_H
 
 #include <Arduino.h>
-#include "config.h"
 
 class MQ2Sensor {
 private:
     int sensorPin;
-    float r0;          // Clean air resistance
-    float rl;          // Load resistance (typically 10kΩ)
-    float ppm;         // Current PPM reading
-    float voltage;     // Current voltage reading
-    float rs;          // Sensor resistance
-    float ratio;       // RS/R0 ratio
-    
-    // Smoothing variables
-    float readings[10]; // Array to store last 10 readings
-    int readIndex;      // Current index in array
-    float total;        // Running total
-    bool initialized;   // Whether smoothing array is initialized
+    float r0;
+    float rl;
+    float ppm;
+    float voltage;
+    float rs;
+    float ratio;
 
-    float calculateResistance();
-    float calculateRatio();
-    float calculatePPM();
-    float getSmoothedPPM();
+    static constexpr int SMOOTHING_SAMPLES = 10;
+    float readings[SMOOTHING_SAMPLES];
+    int readIndex;
+    float total;
+    bool initialized;
+
+    float calculateResistance() const;
+    float calculateRatio() const;
+    float calculatePPM() const;
+    float applySmoothing(float currentPPM);
     void calibrate();
 
 public:
     MQ2Sensor();
     void init();
     float readPPM();
-    String getAirQuality(float ppm);
-    float getVoltage();
-    float getResistance();
-    bool isCalibrated();
-    float getSmoothedPPM(float currentPPM);
+    const String getAirQuality(float ppm) const;
+    float getVoltage() const { return voltage; }
+    float getResistance() const { return rs; }
+    bool isCalibrated() const { return r0 > 0.0F; }
 };
 
 #endif

@@ -1,126 +1,102 @@
 #include "iot_protocol.h"
+#include <Arduino.h>
 
-WiFiClient espClient;
-IoTProtocol* g_iotProtocol = nullptr;
+// Import config values
+extern const char* MQTT_SERVER;
+extern const uint16_t MQTT_PORT;
+extern const char* MQTT_DEVICE_TOPIC;
+extern const char* MQTT_STATUS_TOPIC;
+extern const char* MQTT_COMMAND_TOPIC;
+extern const uint32_t MQTT_RECONNECT_INTERVAL_MS;
 
-// Static callback for MQTT
+static IoTProtocol* g_instance = nullptr;
+
 void IoTProtocol::mqttCallback(char* topic, byte* payload, unsigned int length) {
-    // This would handle incoming MQTT messages
-    String message = "";
-    for (unsigned int i = 0; i < length; i++) {
-        message += (char)payload[i];
-    }
-    Serial.printf("MQTT Message received on topic %s: %s\n", topic, message.c_str());
-    
-    // Store the command for receiveCommand() to retrieve
-    // Note: This is a static method, so we need to get the instance
-    // For simplicity, we'll use a global variable approach
-    extern IoTProtocol* g_iotProtocol;
-    if (g_iotProtocol) {
-        g_iotProtocol->lastReceivedCommand = message;
-    }
+    String msg;
+    for (unsigned int i = 0; i < length; ++i) msg += (char)payload[i];
+    Serial.printf_P(PSTR("MQTT [%s]: %s\n"), topic, msg.c_str());
+    if (g_instance) g_instance->lastReceivedCommand = msg;
 }
 
-IoTProtocol::IoTProtocol() : mqttClient(espClient) {
-    protocolType = COMM_PROTOCOL;
-    isConnected = false;
-    g_iotProtocol = this;
+IoTProtocol::IoTProtocol() 
+    : mqttClient(espClient)
+    , protocolType(ProtocolType::MQTT)
+    , isConnected(false) {
+    g_instance = this;
 }
 
-bool IoTProtocol::init(int protocol, String server) {
+bool IoTProtocol::init(ProtocolType protocol, const String& server) {
     protocolType = protocol;
-    serverAddress = server;
     
-    switch(protocolType) {
-        case COMM_PROTOCOL_MQTT:
-            // Configure MQTT client
+    switch (protocolType) {
+        case ProtocolType::MQTT:
             mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
             mqttClient.setCallback(mqttCallback);
-            Serial.println("MQTT Protocol initialized");
+            Serial.println(F("MQTT initialized"));
             break;
-            
-        case COMM_PROTOCOL_WEBSOCKET:
-            // Configure WebSocket client
-            webSocket.begin(serverAddress, WS_PORT, "/");
-            webSocket.onEvent([this](WStype_t type, uint8_t * payload, size_t length) {
-                this->webSocketEvent(type, payload, length);
+        case ProtocolType::WEBSOCKET:
+            webSocket.begin(server.c_str(), 8080, "/");
+            webSocket.onEvent([this](WStype_t t, uint8_t* p, size_t l) {
+                webSocketEvent(t, p, l);
             });
-            Serial.println("WebSocket Protocol initialized");
+            Serial.println(F("WebSocket initialized"));
             break;
-            
-        case COMM_PROTOCOL_HTTP:
-            Serial.println("HTTP Protocol initialized");
+        case ProtocolType::HTTP:
+            Serial.println(F("HTTP initialized"));
             break;
-            
-        default:
-            Serial.println("Unknown protocol selected");
-            return false;
     }
-    
     return true;
 }
 
-void IoTProtocol::webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
-    switch(type) {
+void IoTProtocol::webSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
+    switch (type) {
         case WStype_DISCONNECTED:
-            Serial.printf("[WSc] Disconnected!\n");
             isConnected = false;
+            Serial.println(F("[WS] Disconnected"));
             break;
         case WStype_CONNECTED:
-            Serial.printf("[WSc] Connected to url: %s\n", payload);
             isConnected = true;
+            Serial.printf_P(PSTR("[WS] Connected: %s\n"), payload);
             break;
         case WStype_TEXT:
-            Serial.printf("[WSc] Received text: %s\n", payload);
-            // Handle received command
+            Serial.printf_P(PSTR("[WS] Received: %s\n"), payload);
+            lastReceivedCommand = String((char*)payload);
             break;
-        case WStype_BIN:
-            Serial.printf("[WSc] Got binary length: %u\n", length);
+        default:
             break;
     }
 }
 
 bool IoTProtocol::connect() {
-    switch(protocolType) {
-        case COMM_PROTOCOL_MQTT:
+    switch (protocolType) {
+        case ProtocolType::MQTT:
             if (!mqttClient.connected()) {
-                String clientId = "ESP32Client-" + String(random(0xffff), HEX);
-                
-                // Add username/password if needed
+                String clientId = "ESP32-" + String(random(0xffff), HEX);
                 if (mqttClient.connect(clientId.c_str())) {
-                    Serial.println("MQTT Connected");
-                    // Subscribe to command topic
+                    Serial.println(F("MQTT connected"));
                     mqttClient.subscribe(MQTT_COMMAND_TOPIC);
                     isConnected = true;
                     return true;
-                } else {
-                    Serial.printf("MQTT connection failed, state: %d\n", mqttClient.state());
-                    isConnected = false;
-                    return false;
                 }
+                Serial.printf_P(PSTR("MQTT failed: %d\n"), mqttClient.state());
+                isConnected = false;
+                return false;
             }
             return true;
             
-        case COMM_PROTOCOL_WEBSOCKET:
+        case ProtocolType::WEBSOCKET:
             webSocket.loop();
-            // WebSocket connection happens automatically after config
-            if (!isConnected) {
-                webSocket.begin(serverAddress, WS_PORT, "/");
-            }
             return isConnected;
             
-        case COMM_PROTOCOL_HTTP:
-            // HTTP doesn't maintain a connection, so always "connected"
+        case ProtocolType::HTTP:
             isConnected = true;
             return true;
-            
-        default:
-            return false;
     }
+    return false;
 }
 
-bool IoTProtocol::publishSensorData(float ppm, String quality, bool relayState, float temperature, float humidity) {
-    // Create JSON payload
+bool IoTProtocol::publishSensorData(float ppm, const String& quality, bool relayState,
+                                    float temperature, float humidity) {
     DynamicJsonDocument doc(512);
     doc["device_id"] = "esp32_01";
     doc["ppm"] = ppm;
@@ -130,43 +106,27 @@ bool IoTProtocol::publishSensorData(float ppm, String quality, bool relayState, 
     doc["humidity"] = humidity;
     doc["timestamp"] = millis();
     
-    String jsonString;
-    serializeJson(doc, jsonString);
+    String json;
+    serializeJson(doc, json);
     
-    switch(protocolType) {
-        case COMM_PROTOCOL_MQTT:
+    switch (protocolType) {
+        case ProtocolType::MQTT:
             if (mqttClient.connected()) {
-                bool success = mqttClient.publish(MQTT_DEVICE_TOPIC, jsonString.c_str());
-                Serial.printf("MQTT Publish result: %s\n", success ? "Success" : "Failed");
-                return success;
+                bool ok = mqttClient.publish(MQTT_DEVICE_TOPIC, json.c_str());
+                Serial.println(ok ? F("MQTT publish OK") : F("MQTT publish FAIL"));
+                return ok;
             }
             break;
-            
-        case COMM_PROTOCOL_WEBSOCKET:
-            if (isConnected) {
-                bool success = webSocket.sendTXT(jsonString);
-                Serial.printf("WebSocket Send result: %s\n", success ? "Success" : "Failed");
-                return success;
-            }
+        case ProtocolType::WEBSOCKET:
+            if (isConnected) return webSocket.sendTXT(json);
             break;
-            
-        case COMM_PROTOCOL_HTTP:
-            {
-                httpClient.begin("http://192.168.1.100:3000/api/sensor-data");
-                httpClient.addHeader("Content-Type", "application/json");
-                
-                int httpResponseCode = httpClient.POST(jsonString);
-                String response = httpClient.getString();
-                
-                Serial.printf("HTTP POST response code: %d, Response: %s\n", httpResponseCode, response.c_str());
-                
-                httpClient.end();
-                
-                return (httpResponseCode > 0 && httpResponseCode < 300);
-            }
-            break;
+        case ProtocolType::HTTP:
+            httpClient.begin("http://192.168.1.100:3000/api/sensor-data");
+            httpClient.addHeader("Content-Type", "application/json");
+            int code = httpClient.POST(json);
+            httpClient.end();
+            return code > 0 && code < 300;
     }
-    
     return false;
 }
 
@@ -176,117 +136,66 @@ bool IoTProtocol::updateDeviceStatus(bool online) {
     doc["status"] = online ? "online" : "offline";
     doc["timestamp"] = millis();
     
-    String jsonString;
-    serializeJson(doc, jsonString);
+    String json;
+    serializeJson(doc, json);
     
-    switch(protocolType) {
-        case COMM_PROTOCOL_MQTT:
-            if (mqttClient.connected()) {
-                return mqttClient.publish(MQTT_STATUS_TOPIC, jsonString.c_str());
-            }
-            break;
-            
-        case COMM_PROTOCOL_WEBSOCKET:
-            if (isConnected) {
-                return webSocket.sendTXT("status:" + jsonString);
-            }
-            break;
-            
-        case COMM_PROTOCOL_HTTP:
-            {
-                 httpClient.begin("http://localhost:3000/api/sensor-data");
-                 httpClient.addHeader("Content-Type", "application/json");
-                 
-                 int httpResponseCode = httpClient.PUT(jsonString);
-                httpClient.end();
-                
-                return (httpResponseCode > 0 && httpResponseCode < 300);
-            }
-            break;
-    }
-    
-    return false;
-}
-
-bool IoTProtocol::sendCommand(String command) {
-    // For ESP32, typically commands come IN rather than going OUT
-    // This would be used if the ESP32 needs to send commands to other devices
-    return false;
-}
-
-String IoTProtocol::receiveCommand() {
-    String command = "";
-    
-    switch(protocolType) {
-        case COMM_PROTOCOL_MQTT:
-            if (mqttClient.connected()) {
-                mqttClient.loop();  // Process MQTT messages
-                // Return the stored command and clear it
-                command = lastReceivedCommand;
-                if (command.length() > 0) {
-                    lastReceivedCommand = "";  // Clear after reading
-                }
-            }
-            break;
-            
-        case COMM_PROTOCOL_WEBSOCKET:
-            webSocket.loop();
-            // Command handling is done in webSocketEvent
-            break;
-            
-        case COMM_PROTOCOL_HTTP:
-            {
-                 // HTTP is not ideal for receiving commands in real-time
-                 // Would need to poll for commands
-                 httpClient.begin("http://localhost:3000/api/device-commands/esp32_01");
-                 int httpResponseCode = httpClient.GET();
-                
-                if (httpResponseCode > 0) {
-                    command = httpClient.getString();
-                }
-                
-                httpClient.end();
-            }
-            break;
-    }
-    
-    return command;
-}
-
-bool IoTProtocol::isConnectedToServer() {
-    switch(protocolType) {
-        case COMM_PROTOCOL_MQTT:
-            return mqttClient.connected();
-        case COMM_PROTOCOL_WEBSOCKET:
-            return isConnected;
-        case COMM_PROTOCOL_HTTP:
-            // For HTTP, check WiFi connection
-            return WiFi.status() == WL_CONNECTED;
+    switch (protocolType) {
+        case ProtocolType::MQTT:
+            return mqttClient.connected() && 
+                   mqttClient.publish(MQTT_STATUS_TOPIC, json.c_str());
+        case ProtocolType::WEBSOCKET:
+            return isConnected && webSocket.sendTXT("status:" + json);
         default:
             return false;
     }
 }
 
-void IoTProtocol::loop() {
-    // Call this in your main loop for proper operation
-    switch(protocolType) {
-        case COMM_PROTOCOL_MQTT:
+String IoTProtocol::receiveCommand() {
+    String cmd;
+    switch (protocolType) {
+        case ProtocolType::MQTT:
             if (mqttClient.connected()) {
                 mqttClient.loop();
-            } else {
-                // Try to reconnect with delay
-                static unsigned long lastReconnectAttempt = 0;
-                if (millis() - lastReconnectAttempt > 5000) { // Try to reconnect every 5 seconds
-                    lastReconnectAttempt = millis();
-                    if (connect()) {
-                        lastReconnectAttempt = 0;
-                    }
-                }
+                cmd = std::move(lastReceivedCommand);
             }
             break;
-            
-        case COMM_PROTOCOL_WEBSOCKET:
+        case ProtocolType::WEBSOCKET:
             webSocket.loop();
+            break;
+        default:
+            break;
+    }
+    return cmd;
+}
+
+bool IoTProtocol::isConnectedToServer() const {
+    switch (protocolType) {
+        case ProtocolType::MQTT:
+            return mqttClient.connected();
+        case ProtocolType::WEBSOCKET:
+            return isConnected;
+        case ProtocolType::HTTP:
+            return WiFi.status() == WL_CONNECTED;
+    }
+    return false;
+}
+
+void IoTProtocol::loop() {
+    static uint32_t lastReconnect = 0;
+    
+    switch (protocolType) {
+        case ProtocolType::MQTT:
+            if (mqttClient.connected()) {
+                mqttClient.loop();
+            } else if (millis() - lastReconnect >= MQTT_RECONNECT_INTERVAL_MS) {
+                lastReconnect = millis();
+                connect();
+            }
+            break;
+        case ProtocolType::WEBSOCKET:
+            webSocket.loop();
+            break;
+        default:
             break;
     }
 }

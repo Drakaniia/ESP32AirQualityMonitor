@@ -3,15 +3,10 @@
 
 #include <Adafruit_SSD1306.h>
 #include <Wire.h>
-#include <Arduino.h>
 
 class OLEDDisplay {
 private:
     Adafruit_SSD1306 display;
-    int screenWidth;
-    int screenHeight;
-    int sdaPin;
-    int sclPin;
     bool isInitialized;
 
 public:
@@ -19,12 +14,10 @@ public:
     bool init();
     void clear();
     void showWelcome();
-    void showAirQuality(float ppm, String quality, bool relayState);
-    void showMessage(String message);
-    void showCustomMessage(String message);
-    void showWiFiStatus(String ip);
-    void showSensorData(float ppm, float voltage, float resistance);
-    void showSystemInfo(String status);
+    void showAirQuality(float ppm, const String& quality, bool relayState);
+    void showMessage(const String& message);
+    void showCustomMessage(const String& message) { showMessage(message); }
+    void showWiFiStatus(const String& ip);
     void update();
 };
 
