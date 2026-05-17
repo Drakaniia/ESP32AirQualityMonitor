@@ -120,23 +120,17 @@ bool IoTProtocol::connect() {
 }
 
 bool IoTProtocol::publishSensorData(float ppm, String quality, bool relayState, float temperature, float humidity) {
-    // Create JSON payload
-    DynamicJsonDocument doc(512);
-    doc["device_id"] = "esp32_01";
-    doc["ppm"] = ppm;
-    doc["quality"] = quality;
-    doc["relay_state"] = relayState ? "ON" : "OFF";
-    doc["temperature"] = temperature;
-    doc["humidity"] = humidity;
-    doc["timestamp"] = millis();
+    // Create JSON payload using static buffer to avoid heap allocation
+    char jsonBuffer[256];
     
-    String jsonString;
-    serializeJson(doc, jsonString);
+    snprintf(jsonBuffer, sizeof(jsonBuffer), 
+        "{\"device_id\":\"esp32_01\",\"ppm\":%.2f,\"quality\":\"%s\",\"relay_state\":\"%s\",\"temperature\":%.2f,\"humidity\":%.2f,\"timestamp\":%lu}",
+        ppm, quality.c_str(), relayState ? "ON" : "OFF", temperature, humidity, (unsigned long)millis());
     
     switch(protocolType) {
         case COMM_PROTOCOL_MQTT:
             if (mqttClient.connected()) {
-                bool success = mqttClient.publish(MQTT_DEVICE_TOPIC, jsonString.c_str());
+                bool success = mqttClient.publish(MQTT_DEVICE_TOPIC, jsonBuffer);
                 Serial.printf("MQTT Publish result: %s\n", success ? "Success" : "Failed");
                 return success;
             }
@@ -144,7 +138,7 @@ bool IoTProtocol::publishSensorData(float ppm, String quality, bool relayState, 
             
         case COMM_PROTOCOL_WEBSOCKET:
             if (isConnected) {
-                bool success = webSocket.sendTXT(jsonString);
+                bool success = webSocket.sendTXT(jsonBuffer);
                 Serial.printf("WebSocket Send result: %s\n", success ? "Success" : "Failed");
                 return success;
             }
@@ -155,7 +149,7 @@ bool IoTProtocol::publishSensorData(float ppm, String quality, bool relayState, 
                 httpClient.begin("http://192.168.1.100:3000/api/sensor-data");
                 httpClient.addHeader("Content-Type", "application/json");
                 
-                int httpResponseCode = httpClient.POST(jsonString);
+                int httpResponseCode = httpClient.POST(jsonBuffer);
                 String response = httpClient.getString();
                 
                 Serial.printf("HTTP POST response code: %d, Response: %s\n", httpResponseCode, response.c_str());
@@ -171,24 +165,23 @@ bool IoTProtocol::publishSensorData(float ppm, String quality, bool relayState, 
 }
 
 bool IoTProtocol::updateDeviceStatus(bool online) {
-    DynamicJsonDocument doc(256);
-    doc["device_id"] = "esp32_01";
-    doc["status"] = online ? "online" : "offline";
-    doc["timestamp"] = millis();
+    // Create JSON payload using static buffer to avoid heap allocation
+    char jsonBuffer[128];
     
-    String jsonString;
-    serializeJson(doc, jsonString);
+    snprintf(jsonBuffer, sizeof(jsonBuffer),
+        "{\"device_id\":\"esp32_01\",\"status\":\"%s\",\"timestamp\":%lu}",
+        online ? "online" : "offline", (unsigned long)millis());
     
     switch(protocolType) {
         case COMM_PROTOCOL_MQTT:
             if (mqttClient.connected()) {
-                return mqttClient.publish(MQTT_STATUS_TOPIC, jsonString.c_str());
+                return mqttClient.publish(MQTT_STATUS_TOPIC, jsonBuffer);
             }
             break;
             
         case COMM_PROTOCOL_WEBSOCKET:
             if (isConnected) {
-                return webSocket.sendTXT("status:" + jsonString);
+                return webSocket.sendTXT("status:" + String(jsonBuffer));
             }
             break;
             
@@ -197,7 +190,7 @@ bool IoTProtocol::updateDeviceStatus(bool online) {
                  httpClient.begin("http://localhost:3000/api/sensor-data");
                  httpClient.addHeader("Content-Type", "application/json");
                  
-                 int httpResponseCode = httpClient.PUT(jsonString);
+                 int httpResponseCode = httpClient.PUT(jsonBuffer);
                 httpClient.end();
                 
                 return (httpResponseCode > 0 && httpResponseCode < 300);

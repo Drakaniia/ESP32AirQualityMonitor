@@ -1,88 +1,70 @@
-# PlatformIO
-.pio/
-.vscode/
-*.tmp
-*.bak
+```
+# Compiled and build artifacts
+*.o
+*.obj
+*.out
+*.exe
+*.dll
+*.so
+*.a
 
-# Build artifacts
-build/
+# Dependencies
+venv/
+.venv/
+__pycache__/
+.mypy_cache/
+.pytest_cache/
+node_modules/
 dist/
-*.bin
-*.elf
-*.hex
-*.map
+build/
+target/
+.gradle/
 
-# IDE files
+# Logs and temp files
+*.log
+*.tmp
 *.swp
 *.swo
-*~
 
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Node.js (for dashboard)
-dashboard/node_modules/
-dashboard/.next/
-dashboard/out/
-dashboard/build/
-dashboard/.env.local
-dashboard/.env.development.local
-dashboard/.env.test.local
-dashboard/.env.production.local
-dashboard/npm-debug.log*
-dashboard/yarn-debug.log*
-dashboard/yarn-error.log*
-
-# Node.js (for bridge)
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Logs
-logs
-*.log
-
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
-
-# Coverage directory used by tools like istanbul
-coverage/
-*.lcov
-
-# Dependency directories
-jspm_packages/
-
-# Optional npm cache directory
-.npm
-
-# Optional eslint cache
-.eslintcache
-
-# Micro-controller specific
-*.pyc
-__pycache__/
-
-# Firebase
-firebase-debug.log
-firebase-debug.*.log
-
-# Firebase database files (removed - using MQTT instead)
-database.rules.json
-
-# Environment variables
+# Environment
 .env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.vercel
+*.env.*
+
+# Editors
+.vscode/
+.idea/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# Compressed files
+*.zip
+*.gz
+*.tar
+*.tgz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.zst
+*.lz4
+*.lzh
+*.cab
+*.arj
+*.rpm
+*.deb
+*.Z
+*.lz
+*.lzo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
+```

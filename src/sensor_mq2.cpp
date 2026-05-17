@@ -70,12 +70,20 @@ void MQ2Sensor::calibrate() {
 }
 
 float MQ2Sensor::readPPM() {
-    voltage = (analogRead(sensorPin) / 4095.0) * 3.3;
+    // Read voltage once and cache it for all calculations
+    float adcValue = analogRead(sensorPin);
+    voltage = (adcValue / 4095.0) * 3.3;
+    
+    // Calculate sensor resistance using cached voltage
     rs = calculateResistance();
+    
+    // Calculate ratio
     ratio = calculateRatio();
+    
+    // Calculate PPM from ratio
     float currentPPM = calculatePPM();
     
-    // Apply smoothing
+    // Apply smoothing to reduce noise
     ppm = getSmoothedPPM(currentPPM);
 
     return ppm;
@@ -83,10 +91,7 @@ float MQ2Sensor::readPPM() {
 
 float MQ2Sensor::calculateResistance() {
     if (voltage <= 0.01) {  // Prevent division by very small numbers
-        // Calculate voltage from current reading if not cached
-        float currentVoltage = (analogRead(sensorPin) / 4095.0) * 3.3;
-        if (currentVoltage <= 0.01) currentVoltage = 0.01; // Prevent division by zero
-        return ((3.3 - currentVoltage) / currentVoltage) * rl;
+        voltage = 0.01; // Use minimum voltage to prevent division by zero
     }
 
     // Calculate sensor resistance: Rs = ( (Vc - Vrl) / Vrl ) * RL
