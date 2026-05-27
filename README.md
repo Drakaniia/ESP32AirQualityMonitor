@@ -4,14 +4,15 @@ A comprehensive IoT system for real-time air quality monitoring using ESP32, MQ-
 
 ## Preview
 
-![Dashboard View 1](img/dashboard1.png)
-![Dashboard View 2](img/dashboard2.png)
-![Dashboard View 3](img/dashboard3.png)
-![Dashboard View 4](img/dashboard4.png)
+|            Dashboard View 1             |            Dashboard View 2             |
+| :-------------------------------------: | :-------------------------------------: |
+| ![Dashboard View 1](img/dashboard1.png) | ![Dashboard View 2](img/dashboard2.png) |
+| ![Dashboard View 3](img/dashboard3.png) | ![Dashboard View 4](img/dashboard4.png) |
 
 ## Features
 
 ### ESP32 Device
+
 - **Real-time Sensing**: MQ-2 combustible gas sensor with PPM readings
 - **Temperature & Humidity**: DHT11/DHT22 sensor for environmental monitoring (configurable with calibration)
 - **Local Display**: 0.96" OLED showing current air quality and relay status
@@ -20,6 +21,7 @@ A comprehensive IoT system for real-time air quality monitoring using ESP32, MQ-
 - **Remote Control**: MQTT-based commands for relay and display control
 
 ### Web Dashboard
+
 - **Real-time Monitoring**: Live air quality data and device status
 - **Historical Charts**: Interactive charts showing trends (24h, 7d, all-time)
 - **Device Control**: Remote relay control and sampling interval adjustment
@@ -28,6 +30,7 @@ A comprehensive IoT system for real-time air quality monitoring using ESP32, MQ-
 - **Authentication**: Secure Firebase Auth integration
 
 ### MQTT Bridge
+
 - **Real-time Communication**: Bidirectional MQTT message handling
 - **API Integration**: RESTful endpoints for dashboard communication
 - **Command Relay**: Forwards commands between dashboard and ESP32
@@ -54,6 +57,7 @@ Firebase Authentication
 ## Hardware Requirements
 
 ### Components
+
 - ESP32 Dev Board
 - MQ-2 Gas Sensor
 - DHT11 or DHT22 Temperature/Humidity Sensor
@@ -64,69 +68,77 @@ Firebase Authentication
 
 #### Pin Connection Table
 
-| Component | Component Pin | Wire Color (Suggested) | ESP32 Pin | Function |
-|-----------|---------------|------------------------|-----------|----------|
-| **OLED Display** |
-| OLED | VCC | Red | 3.3V | Power Supply |
-| OLED | GND | Black | GND | Ground |
-| OLED | SDA | Blue | GPIO21 | I2C Data |
-| OLED | SCL | Yellow | GPIO22 | I2C Clock |
-| **MQ-2 Sensor** |
-| MQ-2 | VCC | Red | 5V | Power Supply |
-| MQ-2 | GND | Black | GND | Ground |
-| MQ-2 | AOUT | Green | GPIO34 | Analog Output |
-| **DHT11/DHT22 Sensor** |
-| DHT | VCC | Red | 3.3V | Power Supply |
-| DHT | GND | Black | GND | Ground |
-| DHT | DATA | Yellow | GPIO14 | Digital Data Pin |
+| Component                                | Component Pin        | Wire Color (Suggested) | ESP32 Pin   | Function                                           |
+| ---------------------------------------- | -------------------- | ---------------------- | ----------- | -------------------------------------------------- |
+| **OLED Display**                         |
+| OLED                                     | VCC                  | Red                    | 3.3V        | Power Supply                                       |
+| OLED                                     | GND                  | Black                  | GND         | Ground                                             |
+| OLED                                     | SDA                  | Blue                   | GPIO21      | I2C Data                                           |
+| OLED                                     | SCL                  | Yellow                 | GPIO22      | I2C Clock                                          |
+| **MQ-2 Sensor**                          |
+| MQ-2                                     | VCC                  | Red                    | 5V          | Power Supply                                       |
+| MQ-2                                     | GND                  | Black                  | GND         | Ground                                             |
+| MQ-2                                     | AOUT                 | Green                  | GPIO34      | Analog Output                                      |
+| **DHT11/DHT22 Sensor**                   |
+| DHT                                      | VCC                  | Red                    | 3.3V        | Power Supply                                       |
+| DHT                                      | GND                  | Black                  | GND         | Ground                                             |
+| DHT                                      | DATA                 | Yellow                 | GPIO14      | Digital Data Pin                                   |
 | **Relay Module** (bidirectional control) |
-| Relay | VCC | Red | 5V | Power Supply |
-| Relay | GND | Black | GND | Ground |
-| Relay | IN | Orange | GPIO26 | Control Signal (ESP32 → Relay) |
-| Relay | NO (Normally Open) | Yellow | Device Load | Output (Relay → External Device) |
-| Relay | COM (Common) | Blue | Device Load | Common Terminal |
-| Relay | NC (Normally Closed) | Green | Device Load | Output (Relay → External Device - normally closed) |
+| Relay                                    | VCC                  | Red                    | 5V          | Power Supply                                       |
+| Relay                                    | GND                  | Black                  | GND         | Ground                                             |
+| Relay                                    | IN                   | Orange                 | GPIO26      | Control Signal (ESP32 → Relay)                     |
+| Relay                                    | NO (Normally Open)   | Yellow                 | Device Load | Output (Relay → External Device)                   |
+| Relay                                    | COM (Common)         | Blue                   | Device Load | Common Terminal                                    |
+| Relay                                    | NC (Normally Closed) | Green                  | Device Load | Output (Relay → External Device - normally closed) |
 
 ## Quick Start
 
 ### 1. Software Requirements
+
 - [Visual Studio Code](https://code.visualstudio.com/)
 - [PlatformIO IDE](https://platformio.org/install) (VS Code extension)
-- [Node.js](https://nodejs.org/) (v16 or higher)
+- [Bun](https://bun.sh/) (v1.0 or higher)
 - [Git](https://git-scm.com/)
 
 ### 2. Firebase Setup (Authentication Only)
+
 1. Go to [Firebase Console](https://console.firebase.google.com/)
 2. Create a new project
 3. Enable Authentication (Email/Password or Google)
 4. Get your Firebase configuration from Project Settings → General → Your apps
 
 ### 3. Project Setup
+
 ```bash
 # Clone the repository
 git clone https://github.com/your-username/ESP32AirQualityMonitor.git
 cd ESP32AirQualityMonitor
 
 # Install bridge dependencies
-npm install mqtt express
+bun install
 
 # Install dashboard dependencies
 cd dashboard
-npm install
+bun install
 ```
 
 ### 4. ESP32 Configuration
+
 1. Open project in VS Code with PlatformIO IDE
 2. Update `src/config.h` with your WiFi credentials:
+
 ```cpp
 #define WIFI_SSID "your_wifi_ssid"
 #define WIFI_PASSWORD "your_wifi_password"
 ```
+
 3. Build and upload firmware: PlatformIO → Upload (or `pio run --target upload`)
 
 ### 5. Dashboard Configuration
+
 1. Create environment file: `dashboard/.env.local`
 2. Add Firebase configuration:
+
 ```env
 NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
@@ -137,12 +149,13 @@ NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 ```
 
 ### 6. Run the System
+
 ```bash
 # Start MQTT bridge (from project root)
-BRIDGE_PORT=3002 node mqtt-bridge.js
+BRIDGE_PORT=3002 bun mqtt-bridge.js
 
 # Start dashboard (in new terminal)
-cd dashboard && npm run dev
+cd dashboard && bun run dev
 
 # Visit dashboard
 http://localhost:3000
@@ -178,7 +191,9 @@ http://localhost:3000
 ## Configuration
 
 ### ESP32 Firmware
+
 Edit `src/config.h`:
+
 ```cpp
 // WiFi Configuration
 #define WIFI_SSID "your_wifi_ssid"
@@ -203,7 +218,9 @@ Edit `src/config.h`:
 ```
 
 ### Web Dashboard
+
 Create `dashboard/.env.local`:
+
 ```env
 NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
@@ -214,7 +231,9 @@ NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 ```
 
 ### MQTT Bridge (Optional)
+
 Set environment variables to override defaults:
+
 ```bash
 export MQTT_BROKER=mqtt://broker.hivemq.com
 export MQTT_PORT=1883
@@ -227,6 +246,7 @@ export BRIDGE_PORT=3002
 The system monitors multiple environmental parameters:
 
 ### Gas Detection Levels
+
 The system categorizes combustible gas levels based on PPM readings:
 
 - **Excellent**: < 200 PPM (Very low gas concentration)
@@ -237,7 +257,9 @@ The system categorizes combustible gas levels based on PPM readings:
 - **Hazardous**: > 5000 PPM (Dangerous gas concentration - emergency)
 
 ### Temperature & Humidity Monitoring
+
 The DHT11/DHT22 sensor provides temperature and humidity readings with configurable calibration:
+
 - Temperature accuracy: ±2°C for DHT11, ±0.5°C for DHT22
 - Humidity accuracy: ±5% for DHT11, ±2% for DHT22
 - Calibrated readings with offset compensation
@@ -245,6 +267,7 @@ The DHT11/DHT22 sensor provides temperature and humidity readings with configura
 ## Dashboard Features
 
 ### Real-time Monitoring
+
 - Live PPM readings with color-coded quality indicators
 - Temperature and humidity readings with calibration
 - Device online/offline status
@@ -252,12 +275,14 @@ The DHT11/DHT22 sensor provides temperature and humidity readings with configura
 - Last update timestamps
 
 ### Historical Analysis
+
 - Interactive charts with multiple time ranges
 - Average, minimum, and maximum PPM values
 - Air quality trend visualization
 - Data point counters
 
 ### Device Controls
+
 - Toggle relay on/off
 - Adjust sampling interval (1-60 seconds)
 - Send custom messages to OLED display
@@ -266,11 +291,13 @@ The DHT11/DHT22 sensor provides temperature and humidity readings with configura
 ## MQTT Topics
 
 ### Data Flow
+
 - **Sensor Data**: `airquality/esp32_01/sensor`
 - **Commands**: `airquality/esp32_01/command`
 - **Status**: `airquality/esp32_01/status`
 
 ### Message Format
+
 Sensor data includes: device_id, ppm, temperature, humidity, quality, relay_state, timestamp
 Commands include: relay control actions, display messages
 
@@ -285,6 +312,7 @@ Commands include: relay control actions, display messages
 ## Mobile Support
 
 The dashboard is a Progressive Web App (PWA):
+
 - Installable on mobile devices
 - Offline support for basic features
 - Responsive design for all screen sizes
@@ -293,6 +321,7 @@ The dashboard is a Progressive Web App (PWA):
 ## Development
 
 ### ESP32 Development
+
 ```bash
 # Using PlatformIO (recommended)
 # Build project
@@ -309,32 +338,36 @@ pip install platformio
 ```
 
 ### Dashboard Development
+
 ```bash
 cd dashboard
-npm install
-npm run dev    # Development server
-npm run build  # Production build
-npm run start  # Production server
+bun install
+bun run dev    # Development server
+bun run build  # Production build
+bun run start  # Production server
 ```
 
 ### MQTT Bridge Development
+
 ```bash
 # Install dependencies
-npm install mqtt express
+bun install
 
 # Run bridge
-BRIDGE_PORT=3002 node mqtt-bridge.js
+BRIDGE_PORT=3002 bun mqtt-bridge.js
 ```
 
 ## Data Flow
 
 ### Uploading Data
+
 1. ESP32 reads sensor data every 5 seconds
 2. ESP32 publishes data to MQTT broker
 3. MQTT bridge receives and forwards to dashboard API
 4. Dashboard updates in real-time
 
 ### Receiving Commands
+
 1. Dashboard sends commands to bridge API
 2. Bridge publishes commands to MQTT broker
 3. ESP32 receives and processes commands
@@ -343,11 +376,13 @@ BRIDGE_PORT=3002 node mqtt-bridge.js
 ## Monitoring & Maintenance
 
 ### MQTT Broker
+
 - Monitor message flow and connection status
 - Check bridge console for errors
 - Verify topic subscriptions
 
 ### Device Maintenance
+
 - Calibrate MQ-2 sensor monthly
 - Check wiring connections periodically
 - Update firmware for new features
@@ -356,6 +391,7 @@ BRIDGE_PORT=3002 node mqtt-bridge.js
 ## Troubleshooting
 
 ### Common Issues
+
 - **No data in dashboard**: Check MQTT bridge is running, verify ESP32 MQTT connection
 - **Cannot upload firmware**: Check USB connection, COM port, drivers
 - **WiFi connection fails**: Verify credentials in config.h, ensure signal strength
@@ -363,6 +399,7 @@ BRIDGE_PORT=3002 node mqtt-bridge.js
 - **Bridge errors**: Verify dashboard is running on port 3000
 
 ### Debugging
+
 - Monitor serial output: 115200 baud rate
 - Check MQTT bridge console for messages
 - Verify all environment variables are set correctly
@@ -385,6 +422,7 @@ This project is licensed under MIT License - see the LICENSE file for details.
 For detailed setup instructions, refer to [dashboard/docs/SETUP_GUIDE.md](./dashboard/docs/SETUP_GUIDE.md).
 
 If you encounter issues:
+
 1. Check the troubleshooting section above
 2. Review hardware connections
 3. Monitor serial output (115200 baud)

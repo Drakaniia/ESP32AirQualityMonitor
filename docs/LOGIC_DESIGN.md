@@ -136,6 +136,7 @@ The system operates with several critical timing intervals to balance responsive
 
 1. **Main Loop Timing**
    The main loop operates with a 100ms delay to provide a responsive system while avoiding excessive CPU usage:
+
    ```cpp
    loop() {
        unsigned long currentMillis = millis();
@@ -250,6 +251,7 @@ The system operates with several critical timing intervals to balance responsive
 
 4. **Data Processing Pipeline**
    The system follows a specific order of data processing:
+
    ```
    Raw Sensor Reading → Validation → Conversion → Calibration → Classification → Storage
    ```
@@ -264,6 +266,7 @@ The system operates with several critical timing intervals to balance responsive
 
 1. **MQTT Data Structure**
    Sensor data is transmitted in JSON format with timestamp:
+
    ```json
    {
      "device_id": "esp32_01",
@@ -548,16 +551,19 @@ The relay system provides control for external devices with safety and reliabili
 ## Error Handling and System Robustness
 
 ### Connection Management
+
 - Automatic reconnection to WiFi and MQTT
 - Graceful handling of network outages
 - Local operation during connectivity issues
 
 ### Sensor Monitoring
+
 - Continuous validation of sensor readings
 - Automatic recovery from sensor errors
 - Fallback mechanisms for failed readings
 
 ### Display Management
+
 - Custom message timeout (10 seconds)
 - Priority display during critical events
 - Automatic return to normal display after message timeout

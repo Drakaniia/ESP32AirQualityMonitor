@@ -60,23 +60,23 @@
 
 #### Pin Connection Table
 
-| Component | Component Pin | Wire Color (Suggested) | ESP32 Pin | Function |
-|-----------|---------------|------------------------|-----------|----------|
+| Component        | Component Pin | Wire Color (Suggested) | ESP32 Pin | Function               |
+| ---------------- | ------------- | ---------------------- | --------- | ---------------------- |
 | **OLED Display** |
-| OLED | VCC | Red | 3.3V | Power Supply |
-| OLED | GND | Black | GND | Ground |
-| OLED | SDA | Blue | GPIO21 | I2C Data |
-| OLED | SCL | Yellow | GPIO22 | I2C Clock |
-| **MQ-2 Sensor** |
-| MQ-2 | VCC | Red | 5V | Power Supply |
-| MQ-2 | GND | Black | GND | Ground |
-| MQ-2 | AOUT | Green | GPIO34 | Analog Output |
-| MQ-2 | DOUT | (Not Used) | - | Digital Out (Optional) |
+| OLED             | VCC           | Red                    | 3.3V      | Power Supply           |
+| OLED             | GND           | Black                  | GND       | Ground                 |
+| OLED             | SDA           | Blue                   | GPIO21    | I2C Data               |
+| OLED             | SCL           | Yellow                 | GPIO22    | I2C Clock              |
+| **MQ-2 Sensor**  |
+| MQ-2             | VCC           | Red                    | 5V        | Power Supply           |
+| MQ-2             | GND           | Black                  | GND       | Ground                 |
+| MQ-2             | AOUT          | Green                  | GPIO34    | Analog Output          |
+| MQ-2             | DOUT          | (Not Used)             | -         | Digital Out (Optional) |
 | **Relay Module** |
-| Relay | VCC | Red | 5V | Power Supply |
-| Relay | GND | Black | GND | Ground |
-| Relay | IN | Orange | GPIO26 | Control Signal |
-| Relay | NC/NO/COM | - | - | Load Connection |
+| Relay            | VCC           | Red                    | 5V        | Power Supply           |
+| Relay            | GND           | Black                  | GND       | Ground                 |
+| Relay            | IN            | Orange                 | GPIO26    | Control Signal         |
+| Relay            | NC/NO/COM     | -                      | -         | Load Connection        |
 
 #### Breadboard Layout Diagram
 
@@ -119,6 +119,7 @@
 #### Detailed Connection Notes
 
 **Power Considerations:**
+
 - ESP32 can be powered via USB (5V) or VIN pin (5-12V)
 - 3.3V rail powers OLED only (low current)
 - 5V rail powers MQ-2 sensor and relay (higher current)
@@ -126,18 +127,21 @@
 - For production, use external 5V power supply (2A recommended)
 
 **I2C Bus (OLED Display):**
+
 - Uses hardware I2C (Wire library)
 - Default address: 0x3C
 - Pull-up resistors usually integrated on OLED module
 - Keep I2C wires short (< 20cm) for reliability
 
 **Analog Input (MQ-2):**
+
 - GPIO34 is ADC1_CH6 (12-bit ADC, 0-4095 range)
 - Sensor requires 24-48h preheat for accurate readings
 - AOUT provides analog voltage proportional to gas concentration
 - DOUT can be used for threshold detection (optional)
 
 **Relay Control:**
+
 - GPIO26 provides 3.3V logic signal
 - Relay module includes opto-isolation and voltage conversion
 - NO (Normally Open) and NC (Normally Closed) contacts
@@ -145,6 +149,7 @@
 - Maximum switching: 10A @ 250VAC / 10A @ 30VDC
 
 **Grounding:**
+
 - Common ground essential for all components
 - Star grounding recommended for sensitive analog readings
 - Keep ground wires short and direct

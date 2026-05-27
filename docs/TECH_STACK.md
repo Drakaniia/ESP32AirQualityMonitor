@@ -7,12 +7,14 @@ This document details the technology stack used in the ESP32 Air Quality Monitor
 ## Hardware Stack
 
 ### Microcontroller
+
 - **ESP32**: Primary microcontroller with integrated WiFi capabilities
   - Provides processing power for sensor readings
   - Handles WiFi connectivity and IoT communications
   - Controls all peripheral devices
 
 ### Sensors
+
 - **MQ-2 Gas Sensor**
   - Detects combustible gases (LPG, Butane, Propane, Methane, Alcohol, Hydrogen)
   - Analog output with 12-bit ADC input on ESP32
@@ -24,6 +26,7 @@ This document details the technology stack used in the ESP32 Air Quality Monitor
   - ±0.5°C accuracy for temperature, ±2% for humidity
 
 ### Display and Output
+
 - **SSD1306 OLED Display (128x64)**
   - I2C interface for low pin usage
   - Shows real-time sensor readings and system status
@@ -42,6 +45,7 @@ This document details the technology stack used in the ESP32 Air Quality Monitor
 ## Software Stack
 
 ### Firmware Development
+
 - **Platform**: Arduino framework for ESP32
   - Simplified development with standard libraries
   - Cross-platform compatibility
@@ -53,12 +57,14 @@ This document details the technology stack used in the ESP32 Air Quality Monitor
   - Multi-platform support
 
 ### Programming Language
+
 - **C/C++**: Primary development language for ESP32 firmware
   - Low-level hardware control
   - Memory-efficient execution
   - Direct register access when needed
 
 ### Core Libraries
+
 - **WiFi.h**: ESP32 native WiFi library
   - Handles WiFi connection establishment
   - Network configuration and management
@@ -97,6 +103,7 @@ This document details the technology stack used in the ESP32 Air Quality Monitor
 ## Communication Protocols
 
 ### Primary Communication
+
 - **MQTT (Message Queuing Telemetry Transport)**
   - Lightweight publish/subscribe messaging
   - Ideal for IoT devices with limited resources
@@ -104,6 +111,7 @@ This document details the technology stack used in the ESP32 Air Quality Monitor
   - Quality of Service (QoS) levels for reliability
 
 ### Alternative Protocols
+
 - **WebSocket**
   - Full-duplex communication over single TCP connection
   - Lower latency than HTTP polling
@@ -115,6 +123,7 @@ This document details the technology stack used in the ESP32 Air Quality Monitor
   - Standard web protocols
 
 ### Internal Communication
+
 - **I2C**: Inter-Integrated Circuit
   - Communication with OLED display
   - Two-wire serial protocol
@@ -123,18 +132,21 @@ This document details the technology stack used in the ESP32 Air Quality Monitor
 ## Cloud Infrastructure
 
 ### IoT Communication
+
 - **HiveMQ Public Broker** (`broker.hivemq.com`)
   - Free MQTT broker for prototyping
   - Supports persistent connections
   - Standard MQTT protocol implementation
 
 ### Web Dashboard Hosting
+
 - **Vercel**: Platform for frontend hosting
   - Static site generation
   - Serverless function support
   - Global CDN distribution
 
 ### Backend Services
+
 - **Firebase**: Real-time database and authentication
   - Real-time data synchronization
   - Authentication and user management
@@ -143,6 +155,7 @@ This document details the technology stack used in the ESP32 Air Quality Monitor
 ## Web Dashboard Technologies
 
 ### Frontend Framework
+
 - **Next.js**
   - React-based framework
   - Server-side rendering capabilities
@@ -150,38 +163,44 @@ This document details the technology stack used in the ESP32 Air Quality Monitor
   - API route support
 
 ### Programming Language
+
 - **TypeScript**
   - Type-safe JavaScript development
   - Better IDE support and refactoring
   - Compile-time error detection
 
 ### Styling
+
 - **CSS/Tailwind CSS**
   - Responsive design
   - Component-based styling
   - Mobile-first approach
 
 ### Runtime Environment
-- **Node.js**: JavaScript runtime for server-side operations
-- **Yarn**: Package manager for dependency management
+
+- **Bun**: Modern JavaScript runtime and package manager for dependency management and server-side operations
 
 ## Development Tools
 
 ### Version Control
+
 - **Git**: Distributed version control system
   - Source code management
   - Collaboration support
   - Branching and merging capabilities
 
 ### Package Management
-- **Yarn**: JavaScript package manager
-  - Dependency resolution
-  - Security updates
-  - Consistent installations
+
+- **Bun**: Modern JavaScript package manager
+  - Fast dependency resolution
+  - Native lockfile support (bun.lockb)
+  - Security-focused installations
+  - Integrated script runner
 
 ## System Architecture
 
 ### Firmware Architecture
+
 - **Object-Oriented Design**: Modular classes for different components
   - WiFiManager class
   - MQ2Sensor class
@@ -192,11 +211,13 @@ This document details the technology stack used in the ESP32 Air Quality Monitor
   - DHTSensor class
 
 ### Communication Architecture
+
 - **Event-Driven System**: Asynchronous message handling
 - **State Management**: Proper state tracking for sensors and devices
 - **Error Handling**: Comprehensive error checking and recovery
 
 ### Data Flow
+
 1. Sensor readings are processed locally
 2. Data is validated and classified
 3. Information is displayed on local OLED
