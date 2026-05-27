@@ -8,30 +8,30 @@ export default function SimulationBanner() {
   if (!isSimulationMode) return null
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 bg-yellow-400 text-black border-b-2 border-yellow-600 shadow-lg">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between py-2">
-          <div className="flex items-center space-x-3">
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-black rounded-full animate-pulse"></div>
-              <span className="font-bold text-sm">⚠️ SIMULATION MODE ACTIVE</span>
+    <div className="fixed left-0 right-0 top-0 z-50 border-b border-amber-300/30 bg-amber-300 text-slate-950 shadow-lg">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between gap-3 py-2">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex items-center gap-2">
+              <div className="h-3 w-3 rounded-full bg-black" />
+              <span className="text-sm font-bold">SIMULATION MODE ACTIVE</span>
             </div>
-            <span className="text-sm font-medium">All sensor data is fake</span>
-            <span className="text-xs bg-black text-yellow-400 px-2 py-1 rounded">
+            <span className="hidden text-sm font-medium sm:inline">Sensor data is generated locally</span>
+            <span className="rounded bg-black px-2 py-1 font-mono text-xs text-amber-300">
               {simulationState.generatorState.ppm.toFixed(0)} PPM
             </span>
-            <span className="text-xs bg-black text-yellow-400 px-2 py-1 rounded">
+            <span className="hidden rounded bg-black px-2 py-1 font-mono text-xs text-amber-300 sm:inline">
               {simulationState.generatorState.quality}
             </span>
-            <span className="text-xs bg-black text-yellow-400 px-2 py-1 rounded">
+            <span className="hidden rounded bg-black px-2 py-1 font-mono text-xs text-amber-300 md:inline">
               {simulationState.generatorState.trend.toUpperCase()}
             </span>
           </div>
           <button
             onClick={stopSimulation}
-            className="text-sm font-medium bg-black text-yellow-400 px-3 py-1 rounded hover:bg-gray-900 transition-colors"
+            className="shrink-0 rounded bg-black px-3 py-1 text-sm font-semibold text-amber-300 transition hover:bg-gray-900"
           >
-            Exit Simulation
+            Exit
           </button>
         </div>
       </div>

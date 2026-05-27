@@ -1,185 +1,162 @@
-'use client'
+'use client';
 
-import { useSensorData } from '@/simulation/SimulationProvider'
-import GlassCard from './GlassCard'
+import { FireIcon, SignalIcon } from '@heroicons/react/24/outline';
+import { useSensorData } from '@/simulation/SimulationProvider';
+import GlassCard from './GlassCard';
 
 interface SensorReading {
-  device_id: string
-  ppm: number
-  quality: string
-  relay_state: string
-  timestamp: string
+  device_id: string;
+  ppm: number;
+  quality: string;
+  relay_state: string;
+  timestamp: string;
 }
 
 interface AirQualityCardProps {
-  reading: SensorReading | null
+  reading: SensorReading | null;
 }
 
+const getQualityClasses = (quality: string) => {
+  switch (quality) {
+    case 'Excellent':
+    case 'Good':
+      return {
+        dot: 'bg-emerald-400',
+        badge: 'border-emerald-300/30 bg-emerald-300/10 text-emerald-100',
+        text: 'text-emerald-200',
+      };
+    case 'Moderate':
+      return {
+        dot: 'bg-amber-300',
+        badge: 'border-amber-300/30 bg-amber-300/10 text-amber-100',
+        text: 'text-amber-200',
+      };
+    case 'Poor':
+      return {
+        dot: 'bg-orange-400',
+        badge: 'border-orange-300/30 bg-orange-300/10 text-orange-100',
+        text: 'text-orange-200',
+      };
+    case 'Very Poor':
+    case 'Hazardous':
+      return {
+        dot: 'bg-red-400',
+        badge: 'border-red-300/30 bg-red-300/10 text-red-100',
+        text: 'text-red-200',
+      };
+    default:
+      return {
+        dot: 'bg-slate-500',
+        badge: 'border-slate-400/30 bg-slate-400/10 text-slate-200',
+        text: 'text-slate-300',
+      };
+  }
+};
+
+const getSafetyStatus = (quality: string) => {
+  switch (quality) {
+    case 'Excellent':
+    case 'Good':
+      return 'SAFE';
+    case 'Moderate':
+      return 'CAUTION';
+    case 'Poor':
+      return 'WARNING';
+    case 'Very Poor':
+    case 'Hazardous':
+      return 'UNSAFE';
+    default:
+      return 'UNKNOWN';
+  }
+};
+
 export default function AirQualityCard({ reading }: AirQualityCardProps) {
-  const { isSimulated } = useSensorData({ 
-    currentReading: reading, 
-    historicalData: [], 
-    deviceOnline: false, 
-    deviceCommands: null 
-  })
-
-  const getAQIColor = (quality: string) => {
-    switch (quality) {
-      case 'Excellent':
-        return 'bg-green-500'
-      case 'Good':
-        return 'bg-blue-500'
-      case 'Moderate':
-        return 'bg-yellow-500'
-      case 'Poor':
-        return 'bg-orange-500'
-      case 'Very Poor':
-        return 'bg-red-500'
-      case 'Hazardous':
-        return 'bg-purple-600'
-      default:
-        return 'bg-gray-500'
-    }
-  }
-
-  const getAQIBgColor = (quality: string) => {
-    switch (quality) {
-      case 'Excellent':
-        return 'bg-green-50 border-green-200'
-      case 'Good':
-        return 'bg-blue-50 border-blue-200'
-      case 'Moderate':
-        return 'bg-yellow-50 border-yellow-200'
-      case 'Poor':
-        return 'bg-orange-50 border-orange-200'
-      case 'Very Poor':
-        return 'bg-red-50 border-red-200'
-      case 'Hazardous':
-        return 'bg-purple-50 border-purple-200'
-      default:
-        return 'bg-gray-50 border-gray-200'
-    }
-  }
-
-  const getStatusColor = (quality: string) => {
-    switch (quality) {
-      case 'Excellent':
-      case 'Good':
-        return 'text-green-600 bg-green-100'
-      case 'Moderate':
-        return 'text-yellow-600 bg-yellow-100'
-      case 'Poor':
-        return 'text-orange-600 bg-orange-100'
-      case 'Very Poor':
-      case 'Hazardous':
-        return 'text-red-600 bg-red-100'
-      default:
-        return 'text-gray-600 bg-gray-100'
-    }
-  }
-
-  const getSafetyStatus = (quality: string) => {
-    switch (quality) {
-      case 'Excellent':
-      case 'Good':
-        return { status: 'SAFE', color: 'text-white bg-green-500/50' }
-      case 'Moderate':
-        return { status: 'CAUTION', color: 'text-white bg-yellow-500/50' }
-      case 'Poor':
-        return { status: 'WARNING', color: 'text-white bg-orange-500/50' }
-      case 'Very Poor':
-      case 'Hazardous':
-        return { status: 'UNSAFE', color: 'text-white bg-red-500/50' }
-      default:
-        return { status: 'UNKNOWN', color: 'text-white bg-gray-500/50' }
-    }
-  }
+  const { isSimulated } = useSensorData({
+    currentReading: reading,
+    historicalData: [],
+    deviceOnline: false,
+    deviceCommands: null,
+  });
 
   if (!reading) {
     return (
-      <GlassCard className="p-6">
-        <div className="flex items-center justify-center h-40">
-          <div className="text-center">
-            <div className="loading-spinner mx-auto mb-3 w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-sm text-white">Loading sensor data...</p>
+      <GlassCard className="p-5">
+        <div className="flex h-52 items-center justify-center text-center">
+          <div>
+            <div className="loading-spinner mx-auto mb-3 h-8 w-8 border-4 border-emerald-400 border-t-transparent" />
+            <p className="text-sm text-slate-300">Loading sensor data</p>
           </div>
         </div>
       </GlassCard>
-    )
+    );
   }
 
-  const safetyStatus = getSafetyStatus(reading.quality)
-  const isLive = Date.now() - new Date(reading.timestamp).getTime() < 30000 // Data is fresh if less than 30 seconds old
+  const qualityClasses = getQualityClasses(reading.quality);
+  const isLive = Date.now() - new Date(reading.timestamp).getTime() < 30000;
 
   return (
-    <GlassCard className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-3">
-          <h3 className="text-xl font-semibold text-white">Air Quality</h3>
-          <div className="flex items-center space-x-2">
-            {isLive && (
-              <div className="flex items-center space-x-1.5 bg-white/20 px-2 py-1 rounded-full">
-                <div className={`w-2 h-2 rounded-full ${getAQIColor(reading.quality)} animate-pulse`}></div>
-                <span className="text-xs font-medium text-white">LIVE</span>
-              </div>
-            )}
-            {isSimulated && (
-              <div className="flex items-center space-x-1.5 bg-white/20 px-2 py-1 rounded-full">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
-                <span className="text-xs font-medium text-white">SIM</span>
-              </div>
-            )}
-          </div>
+    <GlassCard className="p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="aq-label">Gas concentration</p>
+          <h2 className="mt-2 text-xl font-semibold text-white">Air quality</h2>
         </div>
-        <div className={`w-4 h-4 rounded-full ${getAQIColor(reading.quality)} animate-pulse shadow-lg`}></div>
+        <FireIcon className="h-6 w-6 text-emerald-300" aria-hidden="true" />
       </div>
 
-      {/* Overall Safety Status */}
-      <div className="mb-6">
-        <div className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-bold text-white ${safetyStatus.color} transition-all duration-300 backdrop-blur-sm border border-white/30`}>
-          {safetyStatus.status}
-        </div>
-      </div>
-
-      {/* Main Reading Display */}
-      <div className="text-center mb-6">
-        <div className="relative inline-block">
-          <div className="text-4xl font-bold text-white transition-all duration-300 hover:scale-105">
+      <div className="mt-6">
+        <div className="flex items-end gap-2">
+          <span className="font-mono text-5xl font-semibold tracking-tight text-white">
             {reading.ppm.toFixed(1)}
-          </div>
-          <div className="text-sm text-white font-medium mt-1">PPM</div>
+          </span>
+          <span className="pb-2 text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">
+            PPM
+          </span>
         </div>
-      </div>
-
-      {/* Quality Badge */}
-      <div className="text-center mb-6">
-        <div className={`inline-block px-4 py-2 rounded-full text-sm font-semibold ${getAQIColor(reading.quality)} text-white transition-all duration-300 hover:scale-105`}>
-          {reading.quality}
-        </div>
-      </div>
-
-      {/* Status Indicators */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between p-3 bg-gray-50/50 backdrop-blur-sm rounded-lg border border-white/30">
-          <span className="text-sm text-white font-medium">Relay Status</span>
-          <div className="flex items-center space-x-2">
-            <div className={`w-2 h-2 rounded-full ${reading.relay_state === 'ON' ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-            <span className={`text-sm font-semibold ${reading.relay_state === 'ON' ? 'text-green-600' : 'text-white'}`}>
-              {reading.relay_state}
+        <div className="mt-4 flex flex-wrap gap-2">
+          <span
+            className={`inline-flex items-center gap-2 rounded-md border px-2.5 py-1 text-xs font-semibold ${qualityClasses.badge}`}
+          >
+            <span className={`h-2 w-2 rounded-full ${qualityClasses.dot}`} />
+            {reading.quality}
+          </span>
+          <span className="rounded-md border border-white/10 bg-white/[0.045] px-2.5 py-1 text-xs font-semibold text-slate-200">
+            {getSafetyStatus(reading.quality)}
+          </span>
+          {isLive && (
+            <span className="inline-flex items-center gap-1.5 rounded-md border border-emerald-300/25 bg-emerald-300/10 px-2.5 py-1 text-xs font-semibold text-emerald-100">
+              <SignalIcon className="h-3.5 w-3.5" aria-hidden="true" />
+              Live
             </span>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between p-3 bg-gray-50/50 backdrop-blur-sm rounded-lg border border-white/30">
-          <span className="text-sm text-white font-medium">Device ID</span>
-          <span className="text-sm font-medium text-white">{reading.device_id}</span>
+          )}
+          {isSimulated && (
+            <span className="rounded-md border border-amber-300/25 bg-amber-300/10 px-2.5 py-1 text-xs font-semibold text-amber-100">
+              Simulated
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Last Update */}
-      <div className="mt-4 text-xs text-white text-center">
-        Last updated: {new Date(reading.timestamp).toLocaleString()}
+      <div className="mt-6 space-y-3">
+        <div className="aq-stat-row">
+          <span className="text-sm text-slate-300">Relay</span>
+          <span
+            className={`font-mono text-sm font-semibold ${reading.relay_state === 'ON' ? qualityClasses.text : 'text-slate-300'}`}
+          >
+            {reading.relay_state}
+          </span>
+        </div>
+        <div className="aq-stat-row">
+          <span className="text-sm text-slate-300">Device ID</span>
+          <span className="font-mono text-sm font-semibold text-white">
+            {reading.device_id}
+          </span>
+        </div>
       </div>
+
+      <p className="mt-4 border-t border-white/10 pt-3 font-mono text-xs text-slate-500">
+        Last update {new Date(reading.timestamp).toLocaleString()}
+      </p>
     </GlassCard>
-  )
+  );
 }

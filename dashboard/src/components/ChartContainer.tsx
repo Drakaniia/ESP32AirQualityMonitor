@@ -1,21 +1,22 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { useSensorData } from '@/simulation/SimulationProvider'
-import GlassCard from './GlassCard'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { ChartBarIcon } from '@heroicons/react/24/outline'
 import {
-  Chart as ChartJS,
   CategoryScale,
+  Chart as ChartJS,
+  Legend,
   LinearScale,
-  PointElement,
   LineElement,
+  PointElement,
+  TimeScale,
   Title,
   Tooltip,
-  Legend,
-  TimeScale,
 } from 'chart.js'
 import { Line } from 'react-chartjs-2'
 import 'chartjs-adapter-date-fns'
+import { useSensorData } from '@/simulation/SimulationProvider'
+import GlassCard from './GlassCard'
 
 ChartJS.register(
   CategoryScale,
@@ -42,59 +43,83 @@ interface ChartContainerProps {
   data: SensorReading[]
 }
 
+type TimeRange = '1h' | '6h' | '24h' | '7d' | 'all'
+type Trend = 'rising' | 'falling' | 'stable'
+
+const ranges: Array<{ id: TimeRange; label: string }> = [
+  { id: '1h', label: '1 Hour' },
+  { id: '6h', label: '6 Hours' },
+  { id: '24h', label: '24 Hours' },
+  { id: '7d', label: '7 Days' },
+  { id: 'all', label: 'All Time' },
+]
+
+const trendColor = (trend: Trend) => {
+  if (trend === 'rising') return 'text-red-300'
+  if (trend === 'falling') return 'text-emerald-300'
+  return 'text-slate-300'
+}
+
+function StatTile({ label, value, tone = 'text-white' }: { label: string; value: string; tone?: string }) {
+  return (
+    <div className="aq-subpanel p-3 text-center">
+      <div className={`font-mono text-2xl font-semibold ${tone}`}>{value}</div>
+      <div className="mt-1 text-xs font-medium text-slate-400">{label}</div>
+    </div>
+  )
+}
+
+const getTrend = (values: number[], tolerance: number): Trend => {
+  const recentValues = values.slice(-10)
+  const olderValues = values.slice(-20, -10)
+  if (recentValues.length === 0) return 'stable'
+
+  const recentAvg = recentValues.reduce((a, b) => a + b, 0) / recentValues.length
+  const olderAvg = olderValues.length > 0
+    ? olderValues.reduce((a, b) => a + b, 0) / olderValues.length
+    : recentAvg
+
+  if (recentAvg > olderAvg * (1 + tolerance)) return 'rising'
+  if (recentAvg < olderAvg * (1 - tolerance)) return 'falling'
+  return 'stable'
+}
+
 export default function ChartContainer({ data }: ChartContainerProps) {
-  const { isSimulated } = useSensorData({ 
-    currentReading: null, 
-    historicalData: data, 
-    deviceOnline: false, 
-    deviceCommands: null 
+  const { isSimulated } = useSensorData({
+    currentReading: null,
+    historicalData: data,
+    deviceOnline: false,
+    deviceCommands: null,
   })
-  const [timeRange, setTimeRange] = useState<'1h' | '6h' | '24h' | '7d' | 'all'>('24h')
-  const [filteredData, setFilteredData] = useState(data)
+  const [timeRange, setTimeRange] = useState<TimeRange>('24h')
   const [isLive, setIsLive] = useState(true)
   const intervalRef = useRef<NodeJS.Timeout>()
 
-  useEffect(() => {
-    const now = new Date()
-    let filtered = [...data]
+  const filteredData = useMemo(() => {
+    const now = Date.now()
 
     switch (timeRange) {
       case '1h':
-        const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000)
-        filtered = data.filter(reading => new Date(reading.timestamp) >= oneHourAgo)
-        break
+        return data.filter((reading) => new Date(reading.timestamp).getTime() >= now - 60 * 60 * 1000)
       case '6h':
-        const sixHoursAgo = new Date(now.getTime() - 6 * 60 * 60 * 1000)
-        filtered = data.filter(reading => new Date(reading.timestamp) >= sixHoursAgo)
-        break
+        return data.filter((reading) => new Date(reading.timestamp).getTime() >= now - 6 * 60 * 60 * 1000)
       case '24h':
-        const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-        filtered = data.filter(reading => new Date(reading.timestamp) >= twentyFourHoursAgo)
-        break
+        return data.filter((reading) => new Date(reading.timestamp).getTime() >= now - 24 * 60 * 60 * 1000)
       case '7d':
-        const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-        filtered = data.filter(reading => new Date(reading.timestamp) >= sevenDaysAgo)
-        break
+        return data.filter((reading) => new Date(reading.timestamp).getTime() >= now - 7 * 24 * 60 * 60 * 1000)
       case 'all':
       default:
-        filtered = data
-        break
+        return data
     }
-
-    setFilteredData(filtered)
   }, [data, timeRange])
 
-  // Auto-refresh for live data
   useEffect(() => {
     if (isLive && (timeRange === '1h' || timeRange === '6h')) {
       intervalRef.current = setInterval(() => {
-        // Trigger a refresh by updating the filtered data
-        setFilteredData(prev => [...prev])
-      }, 5000) // Refresh every 5 seconds for live data
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-      }
+        setIsLive((current) => current)
+      }, 5000)
+    } else if (intervalRef.current) {
+      clearInterval(intervalRef.current)
     }
 
     return () => {
@@ -104,83 +129,71 @@ export default function ChartContainer({ data }: ChartContainerProps) {
     }
   }, [isLive, timeRange])
 
-  const getQualityColor = (quality: string) => {
-    switch (quality) {
-      case 'Excellent': return 'rgb(34, 197, 94)'
-      case 'Good': return 'rgb(59, 130, 246)'
-      case 'Moderate': return 'rgb(250, 204, 21)'
-      case 'Poor': return 'rgb(251, 146, 60)'
-      case 'Very Poor': return 'rgb(239, 68, 68)'
-      case 'Hazardous': return 'rgb(147, 51, 234)'
-      default: return 'rgb(156, 163, 175)'
-    }
-  }
-
   const chartData = {
-    labels: filteredData.map(reading => new Date(reading.timestamp)),
+    labels: filteredData.map((reading) => new Date(reading.timestamp)),
     datasets: [
       {
         label: 'Gas/Smoke PPM Level',
-        data: filteredData.map(reading => reading.ppm),
-        borderColor: 'rgb(96, 165, 250)', // light blue-400
-        backgroundColor: 'rgba(96, 165, 250, 0.1)',
-        tension: 0.4,
+        data: filteredData.map((reading) => reading.ppm),
+        borderColor: 'rgb(52, 211, 153)',
+        backgroundColor: 'rgba(52, 211, 153, 0.12)',
+        tension: 0.35,
         fill: true,
         pointRadius: filteredData.length <= 50 ? 4 : 2,
         pointHoverRadius: 6,
-        pointBackgroundColor: 'rgb(96, 165, 250)',
-        pointBorderColor: '#fff',
+        pointBackgroundColor: 'rgb(52, 211, 153)',
+        pointBorderColor: '#ecfdf5',
         pointBorderWidth: 1,
         borderWidth: 3,
         yAxisID: 'y',
       },
       {
-        label: 'Temperature (°C)',
-        data: filteredData.map(reading => reading.temperature !== undefined ? reading.temperature : null),
-        borderColor: 'rgb(249, 115, 22)', // orange-500
-        backgroundColor: 'rgba(249, 115, 22, 0.1)',
-        tension: 0.4,
+        label: 'Temperature (deg C)',
+        data: filteredData.map((reading) => reading.temperature ?? null),
+        borderColor: 'rgb(251, 146, 60)',
+        backgroundColor: 'rgba(251, 146, 60, 0.12)',
+        tension: 0.35,
         fill: false,
         pointRadius: filteredData.length <= 50 ? 4 : 2,
         pointHoverRadius: 6,
-        pointBackgroundColor: 'rgb(249, 115, 22)',
-        pointBorderColor: '#fff',
+        pointBackgroundColor: 'rgb(251, 146, 60)',
+        pointBorderColor: '#fff7ed',
         pointBorderWidth: 1,
         borderWidth: 2,
         yAxisID: 'y1',
       },
       {
         label: 'Humidity (%)',
-        data: filteredData.map(reading => reading.humidity !== undefined ? reading.humidity : null),
-        borderColor: 'rgb(14, 165, 233)', // sky-500
-        backgroundColor: 'rgba(14, 165, 233, 0.1)',
-        tension: 0.4,
+        data: filteredData.map((reading) => reading.humidity ?? null),
+        borderColor: 'rgb(56, 189, 248)',
+        backgroundColor: 'rgba(56, 189, 248, 0.12)',
+        tension: 0.35,
         fill: false,
         pointRadius: filteredData.length <= 50 ? 4 : 2,
         pointHoverRadius: 6,
-        pointBackgroundColor: 'rgb(14, 165, 233)',
-        pointBorderColor: '#fff',
+        pointBackgroundColor: 'rgb(56, 189, 248)',
+        pointBorderColor: '#f0f9ff',
         pointBorderWidth: 1,
         borderWidth: 2,
         yAxisID: 'y1',
       },
       {
         label: 'Quality Thresholds',
-        data: filteredData.map(reading => {
-          const qualityMap: { [key: string]: number } = {
-            'Excellent': 50,
-            'Good': 100,
-            'Moderate': 200,
-            'Poor': 350,
+        data: filteredData.map((reading) => {
+          const qualityMap: Record<string, number> = {
+            Excellent: 50,
+            Good: 100,
+            Moderate: 200,
+            Poor: 350,
             'Very Poor': 500,
-            'Hazardous': 1000,
+            Hazardous: 1000,
           }
           return qualityMap[reading.quality] || 0
         }),
-        borderColor: 'rgb(248, 113, 113)', // red-400
-        backgroundColor: 'rgba(248, 113, 113, 0.1)',
+        borderColor: 'rgb(248, 113, 113)',
+        backgroundColor: 'rgba(248, 113, 113, 0.08)',
         borderDash: [5, 5],
-        tension: 0.4,
+        tension: 0.35,
         fill: false,
         pointRadius: 0,
         pointHoverRadius: 0,
@@ -198,15 +211,15 @@ export default function ChartContainer({ data }: ChartContainerProps) {
       intersect: false,
     },
     animation: {
-      duration: isLive ? 750 : 1000,
+      duration: isLive ? 650 : 950,
     },
     plugins: {
       legend: {
         position: 'top' as const,
         labels: {
           usePointStyle: true,
-          padding: 15,
-          color: 'white',
+          padding: 14,
+          color: '#cbd5e1',
           font: {
             size: 12,
           },
@@ -214,68 +227,45 @@ export default function ChartContainer({ data }: ChartContainerProps) {
       },
       title: {
         display: true,
-        text: 'Real-Time Air Quality Monitoring',
-        color: 'white',
+        text: 'Real-time air quality monitoring',
+        color: '#f8fafc',
         font: {
           size: 16,
           weight: 'bold' as const,
         },
       },
       tooltip: {
-        backgroundColor: 'rgba(30, 41, 59, 0.9)', // slate-800 with opacity
-        titleColor: 'white',
-        bodyColor: 'white',
-        borderColor: 'rgba(255, 255, 255, 0.2)',
+        backgroundColor: 'rgba(2, 6, 23, 0.94)',
+        titleColor: '#f8fafc',
+        bodyColor: '#e2e8f0',
+        borderColor: 'rgba(255, 255, 255, 0.14)',
         borderWidth: 1,
         padding: 12,
-        titleFont: {
-          size: 14,
-          weight: 'bold' as const,
-        },
-        bodyFont: {
-          size: 13,
-        },
         callbacks: {
-          label: function(context: any) {
+          label: (context: any) => {
             let label = context.dataset.label || ''
-            if (label) {
-              label += ': '
-            }
+            if (label) label += ': '
+
             if (context.datasetIndex === 0) {
-              label += context.parsed.y.toFixed(1) + ' PPM'
               const reading = filteredData[context.dataIndex]
-              if (reading) {
-                label += ` (${reading.quality})`
-              }
-            } else if (context.datasetIndex === 1) {
-              label += context.parsed.y.toFixed(1) + '°C'
-            } else if (context.datasetIndex === 2) {
-              label += context.parsed.y.toFixed(1) + '%'
-            } else { // Quality thresholds
-              label += context.parsed.y.toFixed(0) + ' PPM Threshold'
+              return `${label}${context.parsed.y.toFixed(1)} PPM${reading ? ` (${reading.quality})` : ''}`
             }
-            return label
+            if (context.datasetIndex === 1) return `${label}${context.parsed.y.toFixed(1)} deg C`
+            if (context.datasetIndex === 2) return `${label}${context.parsed.y.toFixed(1)}%`
+            return `${label}${context.parsed.y.toFixed(0)} PPM threshold`
           },
-          afterLabel: function(context: any) {
+          afterLabel: (context: any) => {
             const reading = filteredData[context.dataIndex]
-            if (reading) {
-              const additionalInfo = [
-                `Device: ${reading.device_id}`,
-                `Relay: ${reading.relay_state}`,
-                `Time: ${new Date(reading.timestamp).toLocaleString()}`
-              ];
+            if (!reading) return []
 
-              // Add temperature and humidity if available
-              if (reading.temperature !== undefined) {
-                additionalInfo.push(`Temp: ${reading.temperature.toFixed(1)}°C`);
-              }
-              if (reading.humidity !== undefined) {
-                additionalInfo.push(`Humidity: ${reading.humidity.toFixed(1)}%`);
-              }
-
-              return additionalInfo;
-            }
-            return [];
+            const additionalInfo = [
+              `Device: ${reading.device_id}`,
+              `Relay: ${reading.relay_state}`,
+              `Time: ${new Date(reading.timestamp).toLocaleString()}`,
+            ]
+            if (reading.temperature !== undefined) additionalInfo.push(`Temp: ${reading.temperature.toFixed(1)} deg C`)
+            if (reading.humidity !== undefined) additionalInfo.push(`Humidity: ${reading.humidity.toFixed(1)}%`)
+            return additionalInfo
           },
         },
       },
@@ -292,14 +282,10 @@ export default function ChartContainer({ data }: ChartContainerProps) {
         },
         grid: {
           display: false,
-          color: 'rgba(255, 255, 255, 0.1)',
         },
         ticks: {
-          color: 'white',
+          color: '#94a3b8',
         },
-        title: {
-          display: false,
-        }
       },
       y: {
         type: 'linear' as const,
@@ -307,18 +293,14 @@ export default function ChartContainer({ data }: ChartContainerProps) {
         position: 'left' as const,
         title: {
           display: true,
-          text: 'PPM Level',
-          color: 'white',
-          font: {
-            size: 12,
-            weight: 'bold' as const,
-          },
+          text: 'PPM level',
+          color: '#cbd5e1',
         },
         grid: {
-          color: 'rgba(255, 255, 255, 0.1)',
+          color: 'rgba(148, 163, 184, 0.12)',
         },
         ticks: {
-          color: 'white',
+          color: '#94a3b8',
         },
         suggestedMin: 0,
       },
@@ -328,141 +310,93 @@ export default function ChartContainer({ data }: ChartContainerProps) {
         position: 'right' as const,
         title: {
           display: true,
-          text: 'Temp (°C) / Humidity (%)',
-          color: 'white',
-          font: {
-            size: 12,
-            weight: 'bold' as const,
-          },
+          text: 'Temp (deg C) / Humidity (%)',
+          color: '#cbd5e1',
         },
         grid: {
           drawOnChartArea: false,
-          color: 'rgba(255, 255, 255, 0.1)',
         },
         ticks: {
-          color: 'white',
+          color: '#94a3b8',
         },
         min: 0,
-        max: 100, // For temperature and humidity
+        max: 100,
       },
     },
   }
 
-  const getStats = () => {
-    if (filteredData.length === 0) return {
-      ppm: { avg: 0, min: 0, max: 0, trend: 'stable' },
-      temp: { avg: null, min: null, max: null, trend: 'stable' },
-      humidity: { avg: null, min: null, max: null, trend: 'stable' }
+  const stats = useMemo(() => {
+    if (filteredData.length === 0) {
+      return {
+        ppm: { avg: 0, min: 0, max: 0, trend: 'stable' as Trend },
+        temp: { avg: null as number | null, min: null as number | null, max: null as number | null, trend: 'stable' as Trend },
+        humidity: { avg: null as number | null, min: null as number | null, max: null as number | null, trend: 'stable' as Trend },
+      }
     }
 
-    const ppmValues = filteredData.map(r => r.ppm)
-    const tempValues = filteredData.filter(r => r.temperature !== undefined).map(r => r.temperature!)
-    const humidityValues = filteredData.filter(r => r.humidity !== undefined).map(r => r.humidity!)
+    const ppmValues = filteredData.map((reading) => reading.ppm)
+    const tempValues = filteredData.filter((reading) => reading.temperature !== undefined).map((reading) => reading.temperature!)
+    const humidityValues = filteredData.filter((reading) => reading.humidity !== undefined).map((reading) => reading.humidity!)
 
-    // PPM stats
-    const ppmAvg = ppmValues.reduce((a, b) => a + b, 0) / ppmValues.length
-    const ppmMin = Math.min(...ppmValues)
-    const ppmMax = Math.max(...ppmValues)
-
-    // PPM trend
-    const recentPpmValues = ppmValues.slice(-10)
-    const olderPpmValues = ppmValues.slice(-20, -10)
-    const recentPpmAvg = recentPpmValues.reduce((a, b) => a + b, 0) / recentPpmValues.length
-    const olderPpmAvg = olderPpmValues.length > 0 ? olderPpmValues.reduce((a, b) => a + b, 0) / olderPpmValues.length : recentPpmAvg
-
-    let ppmTrend = 'stable'
-    if (recentPpmAvg > olderPpmAvg * 1.1) ppmTrend = 'rising'
-    else if (recentPpmAvg < olderPpmAvg * 0.9) ppmTrend = 'falling'
-
-    // Temperature stats
-    let tempAvg = null, tempMin = null, tempMax = null, tempTrend = 'stable'
-    if (tempValues.length > 0) {
-      tempAvg = tempValues.reduce((a, b) => a + b, 0) / tempValues.length
-      tempMin = Math.min(...tempValues)
-      tempMax = Math.max(...tempValues)
-
-      // Temperature trend
-      const recentTempValues = tempValues.slice(-10)
-      const olderTempValues = tempValues.slice(-20, -10)
-      const recentTempAvg = recentTempValues.length > 0 ? recentTempValues.reduce((a, b) => a + b, 0) / recentTempValues.length : tempAvg!
-      const olderTempAvg = olderTempValues.length > 0 ? olderTempValues.reduce((a, b) => a + b, 0) / olderTempValues.length : recentTempAvg
-
-      if (recentTempAvg > olderTempAvg * 1.01) tempTrend = 'rising'
-      else if (recentTempAvg < olderTempAvg * 0.99) tempTrend = 'falling'
-    }
-
-    // Humidity stats
-    let humidityAvg = null, humidityMin = null, humidityMax = null, humidityTrend = 'stable'
-    if (humidityValues.length > 0) {
-      humidityAvg = humidityValues.reduce((a, b) => a + b, 0) / humidityValues.length
-      humidityMin = Math.min(...humidityValues)
-      humidityMax = Math.max(...humidityValues)
-
-      // Humidity trend
-      const recentHumidityValues = humidityValues.slice(-10)
-      const olderHumidityValues = humidityValues.slice(-20, -10)
-      const recentHumidityAvg = recentHumidityValues.length > 0 ? recentHumidityValues.reduce((a, b) => a + b, 0) / recentHumidityValues.length : humidityAvg!
-      const olderHumidityAvg = olderHumidityValues.length > 0 ? olderHumidityValues.reduce((a, b) => a + b, 0) / olderHumidityValues.length : recentHumidityAvg
-
-      if (recentHumidityAvg > olderHumidityAvg * 1.01) humidityTrend = 'rising'
-      else if (recentHumidityAvg < olderHumidityAvg * 0.99) humidityTrend = 'falling'
+    const buildStats = (values: number[], tolerance: number) => {
+      if (values.length === 0) return { avg: null, min: null, max: null, trend: 'stable' as Trend }
+      return {
+        avg: values.reduce((a, b) => a + b, 0) / values.length,
+        min: Math.min(...values),
+        max: Math.max(...values),
+        trend: getTrend(values, tolerance),
+      }
     }
 
     return {
-      ppm: { avg: ppmAvg, min: ppmMin, max: ppmMax, trend: ppmTrend },
-      temp: { avg: tempAvg, min: tempMin, max: tempMax, trend: tempTrend },
-      humidity: { avg: humidityAvg, min: humidityMin, max: humidityMax, trend: humidityTrend }
+      ppm: {
+        avg: ppmValues.reduce((a, b) => a + b, 0) / ppmValues.length,
+        min: Math.min(...ppmValues),
+        max: Math.max(...ppmValues),
+        trend: getTrend(ppmValues, 0.1),
+      },
+      temp: buildStats(tempValues, 0.01),
+      humidity: buildStats(humidityValues, 0.01),
     }
-  }
+  }, [filteredData])
 
-  const stats = getStats()
   const latestReading = filteredData[filteredData.length - 1]
 
   return (
-    <GlassCard className="p-6">
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 space-y-4 lg:space-y-0">
-        <div className="flex items-center space-x-3">
-          <h3 className="text-xl font-semibold text-white">Air Quality Trends</h3>
-          <div className="flex items-center space-x-2">
-            {isLive && (timeRange === '1h' || timeRange === '6h') && (
-              <div className="flex items-center space-x-1.5 bg-red-500/20 px-2 py-1 rounded-full">
-                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                <span className="text-xs font-medium text-white">LIVE</span>
-              </div>
-            )}
-            {isSimulated && (
-              <div className="flex items-center space-x-1.5 bg-yellow-500/20 px-2 py-1 rounded-full">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
-                <span className="text-xs font-medium text-white">SIM</span>
-              </div>
-            )}
+    <GlassCard className="p-5">
+      <div className="flex flex-col justify-between gap-4 border-b border-white/10 pb-5 lg:flex-row lg:items-center">
+        <div className="flex items-start gap-3">
+          <ChartBarIcon className="mt-1 h-6 w-6 text-emerald-300" aria-hidden="true" />
+          <div>
+            <p className="aq-label">Analytics</p>
+            <h2 className="mt-2 text-xl font-semibold text-white">Air quality trends</h2>
           </div>
+          {isSimulated && (
+            <span className="rounded-md border border-amber-300/25 bg-amber-300/10 px-2.5 py-1 text-xs font-semibold text-amber-100">
+              Simulated
+            </span>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {(['1h', '6h', '24h', '7d', 'all'] as const).map((range) => (
+          {ranges.map((range) => (
             <button
-              key={range}
-              onClick={() => setTimeRange(range)}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${
-                timeRange === range
-                  ? 'bg-white text-blue-600 shadow-md'
-                  : 'bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm'
+              key={range.id}
+              onClick={() => setTimeRange(range.id)}
+              className={`rounded-md px-3 py-1.5 text-sm font-semibold transition ${
+                timeRange === range.id
+                  ? 'bg-emerald-400 text-slate-950 shadow-md'
+                  : 'border border-white/10 bg-white/[0.045] text-slate-200 hover:bg-white/[0.08]'
               }`}
             >
-              {range === '1h' ? '1 Hour' :
-               range === '6h' ? '6 Hours' :
-               range === '24h' ? '24 Hours' :
-               range === '7d' ? '7 Days' : 'All Time'}
+              {range.label}
             </button>
           ))}
           {(timeRange === '1h' || timeRange === '6h') && (
             <button
               onClick={() => setIsLive(!isLive)}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${
-                isLive
-                  ? 'bg-red-600 text-white shadow-md'
-                  : 'bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm'
+              className={`rounded-md px-3 py-1.5 text-sm font-semibold transition ${
+                isLive ? 'bg-red-500 text-white shadow-md' : 'border border-white/10 bg-white/[0.045] text-slate-200 hover:bg-white/[0.08]'
               }`}
             >
               {isLive ? 'Pause' : 'Live'}
@@ -471,140 +405,52 @@ export default function ChartContainer({ data }: ChartContainerProps) {
         </div>
       </div>
 
-      {/* Enhanced Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-        <div className="text-center p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
-          <div className="text-2xl font-bold text-white">{stats.ppm.avg.toFixed(1)}</div>
-          <div className="text-xs text-white font-medium">Average PPM</div>
-        </div>
-        <div className="text-center p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
-          <div className="text-2xl font-bold text-white">{stats.ppm.min.toFixed(1)}</div>
-          <div className="text-xs text-white font-medium">Min PPM</div>
-        </div>
-        <div className="text-center p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
-          <div className="text-2xl font-bold text-white">{stats.ppm.max.toFixed(1)}</div>
-          <div className="text-xs text-white font-medium">Max PPM</div>
-        </div>
-        <div className="text-center p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
-          <div className={`text-2xl font-bold ${
-            stats.ppm.trend === 'rising' ? 'text-red-400' :
-            stats.ppm.trend === 'falling' ? 'text-green-400' : 'text-gray-400'
-          }`}>
-            {stats.ppm.trend === 'rising' ? '↑' : stats.ppm.trend === 'falling' ? '↓' : '→'}
-          </div>
-          <div className="text-xs text-white font-medium">PPM Trend</div>
-        </div>
-        {latestReading && (
-          <div className="text-center p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
-            <div className="text-2xl font-bold text-white">{latestReading.ppm.toFixed(1)}</div>
-            <div className="text-xs text-white font-medium">Current PPM</div>
-          </div>
-        )}
+      <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <StatTile label="Average PPM" value={stats.ppm.avg.toFixed(1)} />
+        <StatTile label="Min PPM" value={stats.ppm.min.toFixed(1)} />
+        <StatTile label="Max PPM" value={stats.ppm.max.toFixed(1)} />
+        <StatTile label="PPM trend" value={stats.ppm.trend} tone={trendColor(stats.ppm.trend)} />
+        {latestReading && <StatTile label="Current PPM" value={latestReading.ppm.toFixed(1)} />}
       </div>
 
-      {/* Temperature and Humidity Stats (if available) */}
       {(stats.temp.avg !== null || stats.humidity.avg !== null) && (
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-          {stats.temp.avg !== null && (
-            <div className="text-center p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
-              <div className="text-2xl font-bold text-white">{stats.temp.avg.toFixed(1)}°C</div>
-              <div className="text-xs text-white font-medium">Avg Temperature</div>
-            </div>
-          )}
-          {stats.temp.min !== null && (
-            <div className="text-center p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
-              <div className="text-2xl font-bold text-white">{stats.temp.min.toFixed(1)}°C</div>
-              <div className="text-xs text-white font-medium">Min Temperature</div>
-            </div>
-          )}
-          {stats.temp.max !== null && (
-            <div className="text-center p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
-              <div className="text-2xl font-bold text-white">{stats.temp.max.toFixed(1)}°C</div>
-              <div className="text-xs text-white font-medium">Max Temperature</div>
-            </div>
-          )}
-          {stats.temp.trend && (
-            <div className="text-center p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
-              <div className={`text-2xl font-bold ${
-                stats.temp.trend === 'rising' ? 'text-red-400' :
-                stats.temp.trend === 'falling' ? 'text-green-400' : 'text-gray-400'
-              }`}>
-                {stats.temp.trend === 'rising' ? '↑' : stats.temp.trend === 'falling' ? '↓' : '→'}
-              </div>
-              <div className="text-xs text-white font-medium">Temp Trend</div>
-            </div>
-          )}
-          {latestReading && latestReading.temperature !== undefined && (
-            <div className="text-center p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
-              <div className="text-2xl font-bold text-white">{latestReading.temperature.toFixed(1)}°C</div>
-              <div className="text-xs text-white font-medium">Current Temp</div>
-            </div>
-          )}
+        <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-5">
+          {stats.temp.avg !== null && <StatTile label="Avg temp" value={`${stats.temp.avg.toFixed(1)} deg C`} />}
+          {stats.temp.min !== null && <StatTile label="Min temp" value={`${stats.temp.min.toFixed(1)} deg C`} />}
+          {stats.temp.max !== null && <StatTile label="Max temp" value={`${stats.temp.max.toFixed(1)} deg C`} />}
+          <StatTile label="Temp trend" value={stats.temp.trend} tone={trendColor(stats.temp.trend)} />
+          {latestReading?.temperature !== undefined && <StatTile label="Current temp" value={`${latestReading.temperature.toFixed(1)} deg C`} />}
         </div>
       )}
 
-      {(stats.humidity.avg !== null) && (
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-          {stats.humidity.avg !== null && (
-            <div className="text-center p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
-              <div className="text-2xl font-bold text-white">{stats.humidity.avg.toFixed(1)}%</div>
-              <div className="text-xs text-white font-medium">Avg Humidity</div>
-            </div>
-          )}
-          {stats.humidity.min !== null && (
-            <div className="text-center p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
-              <div className="text-2xl font-bold text-white">{stats.humidity.min.toFixed(1)}%</div>
-              <div className="text-xs text-white font-medium">Min Humidity</div>
-            </div>
-          )}
-          {stats.humidity.max !== null && (
-            <div className="text-center p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
-              <div className="text-2xl font-bold text-white">{stats.humidity.max.toFixed(1)}%</div>
-              <div className="text-xs text-white font-medium">Max Humidity</div>
-            </div>
-          )}
-          {stats.humidity.trend && (
-            <div className="text-center p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
-              <div className={`text-2xl font-bold ${
-                stats.humidity.trend === 'rising' ? 'text-red-400' :
-                stats.humidity.trend === 'falling' ? 'text-green-400' : 'text-gray-400'
-              }`}>
-                {stats.humidity.trend === 'rising' ? '↑' : stats.humidity.trend === 'falling' ? '↓' : '→'}
-              </div>
-              <div className="text-xs text-white font-medium">Humidity Trend</div>
-            </div>
-          )}
-          {latestReading && latestReading.humidity !== undefined && (
-            <div className="text-center p-3 bg-white/20 backdrop-blur-sm rounded-lg border border-white/30">
-              <div className="text-2xl font-bold text-white">{latestReading.humidity.toFixed(1)}%</div>
-              <div className="text-xs text-white font-medium">Current Humidity</div>
-            </div>
-          )}
+      {stats.humidity.avg !== null && (
+        <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-5">
+          <StatTile label="Avg humidity" value={`${stats.humidity.avg.toFixed(1)}%`} />
+          {stats.humidity.min !== null && <StatTile label="Min humidity" value={`${stats.humidity.min.toFixed(1)}%`} />}
+          {stats.humidity.max !== null && <StatTile label="Max humidity" value={`${stats.humidity.max.toFixed(1)}%`} />}
+          <StatTile label="Humidity trend" value={stats.humidity.trend} tone={trendColor(stats.humidity.trend)} />
+          {latestReading?.humidity !== undefined && <StatTile label="Current humidity" value={`${latestReading.humidity.toFixed(1)}%`} />}
         </div>
       )}
 
-      {/* Chart */}
-      <div className="chart-container" style={{ height: '400px' }}>
+      <div className="chart-container mt-5 rounded-md border border-white/10 bg-[#071915]/80 p-3" style={{ height: '430px' }}>
         {filteredData.length > 0 ? (
           <Line data={chartData} options={options} />
         ) : (
-          <div className="flex items-center justify-center h-full text-white">
-            <div className="text-center">
-              <svg className="mx-auto h-12 w-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-              <p className="mt-2 text-lg font-medium">No data available</p>
-              <p className="text-sm text-gray-300">Try selecting a different time range</p>
+          <div className="flex h-full items-center justify-center text-center">
+            <div>
+              <ChartBarIcon className="mx-auto h-12 w-12 text-slate-500" aria-hidden="true" />
+              <p className="mt-3 text-lg font-semibold text-white">No data available</p>
+              <p className="mt-1 text-sm text-slate-400">Try selecting a different time range.</p>
             </div>
           </div>
         )}
       </div>
 
-      {/* Data Points Count */}
-      <div className="mt-4 flex justify-between items-center text-sm text-white">
+      <div className="mt-4 flex flex-col justify-between gap-2 text-sm text-slate-400 sm:flex-row sm:items-center">
         <span>Showing {filteredData.length} data points</span>
         {latestReading && (
-          <span>Last updated: {new Date(latestReading.timestamp).toLocaleTimeString()}</span>
+          <span>Last updated {new Date(latestReading.timestamp).toLocaleTimeString()}</span>
         )}
       </div>
     </GlassCard>

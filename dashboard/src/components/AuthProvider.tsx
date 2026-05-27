@@ -1,6 +1,12 @@
-'use client'
+'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from 'react';
 
 // Define User type
 interface User {
@@ -16,7 +22,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -40,7 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // For now, we'll just accept any email/password combination
     const mockUser: User = {
       uid: `user_${Date.now()}`,
-      email: email
+      email: email,
     };
 
     // Store user in localStorage
@@ -52,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Simple mock registration - in a real app, you'd call an API
     const mockUser: User = {
       uid: `user_${Date.now()}`,
-      email: email
+      email: email,
     };
 
     // Store user in localStorage
@@ -74,11 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logout,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

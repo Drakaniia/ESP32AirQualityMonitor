@@ -13,11 +13,12 @@ const GlassButton: React.FC<GlassButtonProps> = ({
   href,
   onClick,
   className = '',
-  disabled = false
+  disabled = false,
 }) => {
-  const baseClasses = 'btn-glass flex items-center justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-base font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white focus:ring-opacity-50 transition-all duration-200 w-full text-white';
+  const baseClasses = 'aq-button w-full';
   const disabledClasses = disabled ? 'opacity-50 cursor-not-allowed' : '';
-  const combinedClasses = `${baseClasses} ${disabledClasses} ${className}`.trim();
+  const combinedClasses =
+    `${baseClasses} ${disabledClasses} ${className}`.trim();
 
   if (href) {
     return (
