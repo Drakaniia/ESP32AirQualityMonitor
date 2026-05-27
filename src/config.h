@@ -1,71 +1,128 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#include <cstdint>
+
+// ============================================================================
+// Device Identity
+// ============================================================================
+constexpr const char* DEVICE_ID = "esp32_01";
+
+// ============================================================================
 // WiFi Configuration
-#define WIFI_SSID "Hotspot1"
-#define WIFI_PASSWORD "12345678"
+// ============================================================================
+constexpr const char* WIFI_SSID = "Hotspot1";
+constexpr const char* WIFI_PASSWORD = "12345678";
+constexpr uint32_t WIFI_CONNECTION_TIMEOUT_MS = 20000;
 
-#define DEVICE_ID "esp32_01"
+// ============================================================================
+// Hardware Pin Configuration (ESP32)
+// ============================================================================
+constexpr int MQ2_PIN = 34;       // Analog pin for MQ-2 sensor (ADC1_CH6)
+constexpr int RELAY_PIN = 26;     // Digital pin for relay module
+constexpr int LED_PIN = 25;       // Digital pin for status LED
+constexpr int BUZZER_PIN = 27;    // Digital pin for buzzer
+constexpr int OLED_SDA = 21;      // I2C SDA pin
+constexpr int OLED_SCL = 22;      // I2C SCL pin
+constexpr int DHT_PIN = 14;       // Digital pin for DHT sensor
+constexpr int LED_BUILTIN = 2;    // Built-in LED pin
 
-// Hardware Pin Configuration
-#define MQ2_PIN 34            // Analog pin for MQ-2 sensor
-#define RELAY_PIN 26          // Digital pin for relay module (for controlling external devices - independent of LED/buzzer)
-#define LED_PIN 25            // Digital pin for LED
-#define BUZZER_PIN 27         // Digital pin for buzzer
-#define OLED_SDA 21           // I2C SDA pin for OLED
-#define OLED_SCL 22           // I2C SCL pin for OLED
-#define DHT_PIN 14            // Digital pin for DHT22 temperature/humidity sensor
-
+// ============================================================================
 // OLED Display Configuration
-#define SCREEN_WIDTH 128      // OLED display width, in pixels
-#define SCREEN_HEIGHT 64      // OLED display height, in pixels
-#define OLED_ADDRESS 0x3C     // I2C address for SSD1306
+// ============================================================================
+constexpr int SCREEN_WIDTH = 128;
+constexpr int SCREEN_HEIGHT = 64;
+constexpr uint8_t OLED_ADDRESS = 0x3C;
 
+// ============================================================================
 // MQ-2 Sensor Configuration
-#define MQ2_R0 0.0            // Initial R0 value for MQ-2 sensor (will be calibrated during initialization)
+// ============================================================================
+constexpr float MQ2_R0_DEFAULT = 0.0F;
+constexpr float MQ2_LOAD_RESISTANCE_KOHM = 10.0F;
+constexpr float MQ2_VCC = 3.3F;
+constexpr int MQ2_ADC_RESOLUTION = 4095;
+constexpr float MQ2_BASELINE_PPM = 15.0F;
 
+// ============================================================================
 // DHT Sensor Configuration
-// Note: DHT22 is recommended for better accuracy (±0.5°C) vs DHT11 (±2°C)
-#define DHT_TYPE DHT11        // Type of DHT sensor (DHT22 for better accuracy, DHT11 for basic functionality)
+// ============================================================================
+#define DHT_TYPE DHT11
 
-// DHT11 Calibration Settings
-#define DHT_TEMP_OFFSET -2.0   // Temperature calibration offset (adjust based on testing)
-#define DHT_HUMID_OFFSET 5.0   // Humidity calibration offset (adjust based on testing)
-#define DHT_READING_SAMPLES 5  // Number of readings to average for stability (increased for better accuracy)
-#define DHT_READING_DELAY 2000 // Delay between readings (ms) - Legacy definition, now controlled in code
+constexpr float DHT_TEMP_OFFSET_C = -2.0F;
+constexpr float DHT_HUMID_OFFSET_PCT = 5.0F;
+constexpr int DHT_READING_SAMPLES = 5;
+constexpr int DHT_READING_DELAY_MS = 2000;
 
-// Timing Configuration
-#define SENSOR_READ_INTERVAL 2000     // Sensor reading interval (ms) - reduced for faster response
-#define MQTT_UPDATE_INTERVAL 30000    // MQTT update interval (ms)
-#define COMMAND_CHECK_INTERVAL 2000    // Command check interval (ms) - reduced for faster response
+constexpr float DHT_TEMP_MIN_C = -40.0F;
+constexpr float DHT_TEMP_MAX_C = 80.0F;
+constexpr float DHT_HUMID_MIN_PCT = 0.0F;
+constexpr float DHT_HUMID_MAX_PCT = 100.0F;
+constexpr float DHT_TEMP_CLAMP_MIN_C = -20.0F;
+constexpr float DHT_TEMP_CLAMP_MAX_C = 50.0F;
+constexpr float DHT_HUMID_CLAMP_MIN_PCT = 10.0F;
+constexpr float DHT_HUMID_CLAMP_MAX_PCT = 95.0F;
 
+// ============================================================================
+// Timing Configuration (milliseconds)
+// ============================================================================
+constexpr uint32_t SENSOR_READ_INTERVAL_MS = 2000;
+constexpr uint32_t MQTT_UPDATE_INTERVAL_MS = 30000;
+constexpr uint32_t COMMAND_CHECK_INTERVAL_MS = 2000;
+constexpr uint32_t MQTT_RECONNECT_INTERVAL_MS = 5000;
+constexpr uint32_t CUSTOM_MESSAGE_TIMEOUT_MS = 10000;
+constexpr uint32_t RELAY_DEBOUNCE_MS = 100;
+
+// ============================================================================
 // System Configuration
-#define DEBUG true            // Enable debug output
-#define LED_BUILTIN 2         // Built-in LED pin
+// ============================================================================
+constexpr bool DEBUG_ENABLED = true;
 
-// Communication Protocol Configuration
-#define COMM_PROTOCOL_MQTT 1
-#define COMM_PROTOCOL_WEBSOCKET 2
-#define COMM_PROTOCOL_HTTP 3
-// #define COMM_PROTOCOL COMM_PROTOCOL_HTTP    // Default communication protocol
-#define COMM_PROTOCOL COMM_PROTOCOL_MQTT   
+// ============================================================================
+// Communication Protocol Selection
+// ============================================================================
+enum class CommProtocol : uint8_t {
+    MQTT = 1,
+    WEBSOCKET = 2,
+    HTTP = 3
+};
+constexpr CommProtocol COMM_PROTOCOL = CommProtocol::MQTT;
 
+// ============================================================================
 // MQTT Configuration
-#define MQTT_SERVER "broker.hivemq.com"  // Public MQTT broker
-#define MQTT_PORT 1883
-#define MQTT_DEVICE_TOPIC "airquality/esp32_01/sensor"
-#define MQTT_STATUS_TOPIC "airquality/esp32_01/status"
-#define MQTT_COMMAND_TOPIC "airquality/esp32_01/command"
+// ============================================================================
+constexpr const char* MQTT_SERVER = "broker.hivemq.com";
+constexpr uint16_t MQTT_PORT = 1883;
+constexpr const char* MQTT_DEVICE_TOPIC = "airquality/esp32_01/sensor";
+constexpr const char* MQTT_STATUS_TOPIC = "airquality/esp32_01/status";
+constexpr const char* MQTT_COMMAND_TOPIC = "airquality/esp32_01/command";
 
+// ============================================================================
 // WebSocket Configuration
-#define WS_PORT 8080
+// ============================================================================
+constexpr const char* WS_SERVER_URL = "ws://your-websocket-server.com";
+constexpr uint16_t WS_PORT = 8080;
 
-// Air Quality Thresholds (PPM for MQ-2 combustible gas detection)
-#define AQ_THRESHOLD_EXCELLENT 50     // Background levels
-#define AQ_THRESHOLD_GOOD 200          // Normal indoor air
-#define AQ_THRESHOLD_MODERATE 500     // After cooking/light activity
-#define AQ_THRESHOLD_POOR 1000        // Elevated levels - investigate
-#define AQ_THRESHOLD_VERY_POOR 2000    // High levels - potential concern
-#define AQ_THRESHOLD_HAZARDOUS 5000    // Dangerous levels - immediate action
+// ============================================================================
+// HTTP Configuration
+// ============================================================================
+constexpr const char* HTTP_SERVER_URL = "http://your-http-server.com";
+constexpr uint32_t HTTP_UPDATE_INTERVAL_MS = 30000;
 
-#endif
+// ============================================================================
+// Air Quality Thresholds (PPM - MQ-2 combustible gas)
+// ============================================================================
+constexpr float AQ_THRESHOLD_EXCELLENT = 25.0F;
+constexpr float AQ_THRESHOLD_GOOD = 50.0F;
+constexpr float AQ_THRESHOLD_MODERATE = 200.0F;
+constexpr float AQ_THRESHOLD_POOR = 500.0F;
+constexpr float AQ_THRESHOLD_VERY_POOR = 1000.0F;
+constexpr float AQ_THRESHOLD_HAZARDOUS = 5000.0F;
+constexpr float AQ_ALERT_THRESHOLD = 1000.0F;
+
+// ============================================================================
+// Alert Controller Configuration
+// ============================================================================
+constexpr uint32_t ALERT_BLINK_INTERVAL_MS = 500;
+constexpr uint32_t ALERT_BEEP_INTERVAL_MS = 1000;
+
+#endif // CONFIG_H

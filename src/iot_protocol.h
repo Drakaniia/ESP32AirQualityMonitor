@@ -3,48 +3,37 @@
 
 #include <Arduino.h>
 #include <WiFi.h>
-#include <PubSubClient.h>  // For MQTT
-#include <WebSocketsClient.h>  // For WebSocket
+#include <PubSubClient.h>
+#include <WebSocketsClient.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
-#include "config.h"
 
-// WebSocket Configuration
-#define WS_SERVER_URL "ws://your-websocket-server.com"
-#define WS_PORT 8080
-
-// HTTP Configuration
-#define HTTP_SERVER_URL "http://your-http-server.com"
-#define HTTP_UPDATE_INTERVAL 30000  // 30 seconds
+enum class ProtocolType : uint8_t { MQTT, WEBSOCKET, HTTP };
 
 class IoTProtocol {
 private:
-    WiFiClient wifiClient;
+    WiFiClient espClient;
     PubSubClient mqttClient;
     WebSocketsClient webSocket;
     HTTPClient httpClient;
     
-    String serverAddress;
-    int protocolType;
+    ProtocolType protocolType;
     bool isConnected;
     String lastReceivedCommand;
     
-    // MQTT callbacks
     static void mqttCallback(char* topic, byte* payload, unsigned int length);
-    
-    // WebSocket callbacks
-    void webSocketEvent(WStype_t type, uint8_t * payload, size_t length);
+    void webSocketEvent(WStype_t type, uint8_t* payload, size_t length);
 
 public:
     IoTProtocol();
-    bool init(int protocol, String server = "");
+    bool init(ProtocolType protocol, const String& server = "");
     bool connect();
-    bool publishSensorData(float ppm, String quality, bool relayState, float temperature = 0.0, float humidity = 0.0);
-    bool sendCommand(String command);
-    String receiveCommand();
+    bool publishSensorData(float ppm, const String& quality, bool relayState, 
+                          float temperature, float humidity);
     bool updateDeviceStatus(bool online);
-    bool isConnectedToServer();
-    void loop();  // Call this in your main loop for MQTT and WebSocket
+    String receiveCommand();
+    bool isConnectedToServer() const;
+    void loop();
 };
 
 #endif

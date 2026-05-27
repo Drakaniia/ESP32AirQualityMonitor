@@ -7,17 +7,18 @@ class WiFiManager {
 private:
     const char* ssid;
     const char* password;
-    unsigned long connectionTimeout;
+    uint32_t connectionTimeout;
     bool isConnected;
 
 public:
     WiFiManager();
     bool connect();
     bool reconnect();
-    bool checkConnection();
-    String getLocalIP();
-    int getSignalStrength();
+    bool checkConnection() const;
+    String getLocalIP() const;
+    int getSignalStrength() const;
     void disconnect();
+    bool isConnectedToWiFi() const { return isConnected; }
 };
 
 #endif
