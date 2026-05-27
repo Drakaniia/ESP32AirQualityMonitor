@@ -1,0 +1,10 @@
+node_modules
+.next
+dist
+build
+out
+.antigravitycli
+*.ino
+*.cpp
+*.h
+bun.lock

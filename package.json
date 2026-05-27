@@ -5,7 +5,8 @@
   "main": "mqtt-bridge.js",
   "scripts": {
     "start": "node mqtt-bridge.js",
-    "dev": "node --watch mqtt-bridge.js"
+    "dev": "node --watch mqtt-bridge.js",
+    "format": "prettier --write ."
   },
   "dependencies": {
     "express": "^4.21.2",
@@ -18,5 +19,8 @@
     "dashboard"
   ],
   "author": "Air Quality Monitor",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "prettier": "^3.8.3"
+  }
 }
