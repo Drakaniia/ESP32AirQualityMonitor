@@ -3,12 +3,16 @@ const mqtt = require('mqtt');
 // MQTT Configuration
 const MQTT_BROKER = process.env.MQTT_BROKER || 'mqtt://broker.hivemq.com';
 const MQTT_PORT = process.env.MQTT_PORT || 1883;
-const SENSOR_TOPIC = process.env.MQTT_SENSOR_TOPIC || 'airquality/esp32_01/sensor';
-const COMMAND_TOPIC = process.env.MQTT_COMMAND_TOPIC || 'airquality/esp32_01/command';
-const STATUS_TOPIC = process.env.MQTT_STATUS_TOPIC || 'airquality/esp32_01/status';
+const SENSOR_TOPIC =
+  process.env.MQTT_SENSOR_TOPIC || 'airquality/esp32_01/sensor';
+const COMMAND_TOPIC =
+  process.env.MQTT_COMMAND_TOPIC || 'airquality/esp32_01/command';
+const STATUS_TOPIC =
+  process.env.MQTT_STATUS_TOPIC || 'airquality/esp32_01/status';
 
 // Dashboard API Configuration
-const DASHBOARD_API_URL = process.env.DASHBOARD_API_URL || 'http://localhost:3000';
+const DASHBOARD_API_URL =
+  process.env.DASHBOARD_API_URL || 'http://localhost:3000';
 
 // Create MQTT client
 const client = mqtt.connect(`${MQTT_BROKER}:${MQTT_PORT}`);
@@ -24,7 +28,9 @@ client.on('connect', () => {
     if (err) {
       console.error('Error subscribing to topics:', err);
     } else {
-      console.log(`Subscribed to topics: ${SENSOR_TOPIC}, ${COMMAND_TOPIC}, ${STATUS_TOPIC}`);
+      console.log(
+        `Subscribed to topics: ${SENSOR_TOPIC}, ${COMMAND_TOPIC}, ${STATUS_TOPIC}`
+      );
     }
   });
 });
@@ -36,7 +42,7 @@ client.on('error', (error) => {
 // Handle incoming MQTT messages
 client.on('message', async (topic, message) => {
   console.log(`Received message on topic ${topic}:`, message.toString());
-  
+
   try {
     if (topic === SENSOR_TOPIC) {
       // Forward sensor data to dashboard API
@@ -62,12 +68,16 @@ async function sendSensorData(data) {
       },
       body: JSON.stringify({
         ...data,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       }),
     });
-    
+
     if (!response.ok) {
-      console.error('Error sending sensor data to dashboard:', response.status, await response.text());
+      console.error(
+        'Error sending sensor data to dashboard:',
+        response.status,
+        await response.text()
+      );
     } else {
       console.log('Sensor data forwarded to dashboard successfully');
     }
@@ -100,12 +110,17 @@ async function startCommandListener() {
         client.publish(topic, JSON.stringify(command), { qos: 1 }, (err) => {
           if (err) {
             console.error('Error publishing command to MQTT:', err);
-            return res.status(500).json({ error: 'Failed to send command to device' });
+            return res
+              .status(500)
+              .json({ error: 'Failed to send command to device' });
           }
           console.log(`Command sent to device ${deviceId} on topic ${topic}`);
         });
 
-        res.json({ success: true, message: 'Command sent to device successfully' });
+        res.json({
+          success: true,
+          message: 'Command sent to device successfully',
+        });
       } catch (error) {
         console.error('Error handling command:', error);
         res.status(500).json({ error: 'Failed to process command' });
@@ -139,7 +154,11 @@ async function updateDeviceStatus(data) {
     });
 
     if (!response.ok) {
-      console.error('Error sending device status to dashboard:', response.status, await response.text());
+      console.error(
+        'Error sending device status to dashboard:',
+        response.status,
+        await response.text()
+      );
     } else {
       console.log('Device status forwarded to dashboard successfully');
     }
